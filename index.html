@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SearchFund — Acquisition Platform</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,'Inter',sans-serif;background:#f0f2f5;color:#111;font-size:14px;line-height:1.5}
+
+/* ── NAVBAR ── */
+.navbar{position:fixed;top:0;left:0;right:0;z-index:200;height:60px;background:#fff;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;padding:0 24px;gap:32px}
+.nav-logo{font-size:18px;font-weight:800;color:#2e7d32;letter-spacing:-0.5px;user-select:none}
+.nav-links{display:flex;gap:4px;flex:1}
+.nav-link{padding:6px 14px;border-radius:6px;text-decoration:none;color:#6b7280;font-size:14px;font-weight:500;cursor:pointer;border:none;background:none;transition:all .15s}
+.nav-link:hover{background:#f3f4f6;color:#111}
+.nav-link.active{background:#f0fdf4;color:#2e7d32}
+.nav-avatar{width:36px;height:36px;border-radius:50%;background:#00897b;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;user-select:none}
+
+/* ── LAYOUT ── */
+.app-container{display:flex;margin-top:60px;min-height:calc(100vh - 60px)}
+
+/* ── SIDEBAR ── */
+.sidebar{width:280px;flex-shrink:0;background:#f8f9fa;border-right:1px solid #e5e7eb;position:fixed;top:60px;bottom:0;overflow-y:auto;padding:0 0 24px}
+.sidebar-head{display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px;border-bottom:1px solid #e5e7eb;margin-bottom:4px}
+.sidebar-title{font-size:14px;font-weight:700;color:#111}
+.btn-clear{font-size:12px;color:#9ca3af;cursor:pointer;background:none;border:none;text-decoration:underline}
+.btn-clear:hover{color:#2e7d32}
+.filter-section{padding:16px 20px 14px}
+.filter-label{font-size:10px;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:.12em;margin-bottom:12px}
+.filter-divider{border:none;border-top:1px solid #e5e7eb;margin:0 20px}
+.cb-row{display:flex;align-items:center;gap:9px;margin-bottom:9px;cursor:pointer;font-size:13.5px;color:#374151;user-select:none}
+.cb-row:last-child{margin-bottom:0}
+.cb-row input[type=checkbox]{width:15px;height:15px;accent-color:#2e7d32;cursor:pointer;flex-shrink:0}
+.slider-wrap{margin-top:2px}
+input[type=range]{width:100%;height:4px;-webkit-appearance:none;appearance:none;background:linear-gradient(to right,#4caf50 0%,#4caf50 var(--pct,50%),#e5e7eb var(--pct,50%),#e5e7eb 100%);border-radius:4px;outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;background:#2e7d32;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+input[type=range]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;background:#2e7d32;cursor:pointer;border:none}
+.slider-meta{display:flex;justify-content:space-between;margin-top:9px;font-size:12px;color:#6b7280}
+.slider-meta strong{color:#2e7d32}
+
+/* ── MAIN CONTENT ── */
+.main-content{flex:1;margin-left:280px;padding:24px;min-height:calc(100vh - 60px)}
+.search-sort-row{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.search-input{flex:1;padding:10px 14px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;outline:none;background:#fff;transition:border-color .15s,box-shadow .15s}
+.search-input:focus{border-color:#4caf50;box-shadow:0 0 0 3px rgba(76,175,80,.12)}
+.results-meta{display:flex;align-items:center;gap:10px;white-space:nowrap}
+.results-count{font-size:13px;color:#6b7280}
+.sort-select{padding:8px 10px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;background:#fff;cursor:pointer;outline:none;color:#374151}
+
+/* ── LOADING / EMPTY ── */
+.loading-state{text-align:center;padding:80px 20px;color:#6b7280}
+.spinner{width:38px;height:38px;border:3px solid #e5e7eb;border-top-color:#2e7d32;border-radius:50%;animation:spin .75s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty-state{text-align:center;padding:80px 20px}
+.empty-state h3{font-size:16px;color:#374151;margin-bottom:8px}
+.empty-state p{font-size:13px;color:#9ca3af}
+
+/* ── COMPANY CARD ── */
+.company-card{background:#fff;border-radius:8px;border:1px solid #e5e7eb;padding:20px 22px;margin-bottom:10px;transition:box-shadow .15s,transform .1s}
+.company-card:hover{box-shadow:0 4px 18px rgba(0,0,0,.09);transform:translateY(-1px)}
+.card-row1{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:5px}
+.card-name{font-size:15.5px;font-weight:700;color:#111;line-height:1.3;flex:1;padding-right:16px}
+.score-badge{text-align:center;border-radius:8px;padding:8px 12px;flex-shrink:0;min-width:70px}
+.score-num{font-size:22px;font-weight:800;line-height:1}
+.score-lbl{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-top:2px;opacity:.75}
+.badge-green{background:#e8f5e9;color:#2e7d32}
+.badge-yellow{background:#fffde7;color:#f57f17}
+.badge-orange{background:#fff3e0;color:#e65100}
+.card-row2{font-size:13px;color:#6b7280;margin-bottom:10px}
+.card-row3{display:flex;flex-wrap:wrap;gap:18px;margin-bottom:10px}
+.card-stat{display:flex;align-items:center;gap:5px;font-size:13px;color:#374151}
+.stat-ok{color:#4caf50;font-weight:700;font-size:12px}
+.stat-na{color:#d1d5db;font-size:13px}
+.card-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.tag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500}
+.tag-green{background:#e8f5e9;color:#2e7d32}
+.tag-teal{background:#e0f2f1;color:#00695c}
+.card-footer{display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:1px solid #f3f4f6}
+.card-source{font-size:12px;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
+.card-actions{display:flex;gap:7px;flex-shrink:0;margin-left:12px}
+.btn-sm{padding:5px 12px;border:1px solid #e5e7eb;border-radius:6px;background:#fff;font-size:12px;font-weight:500;color:#374151;cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn-sm:hover{border-color:#4caf50;color:#2e7d32;background:#f0fdf4}
+.btn-sm.active{border-color:#4caf50;color:#2e7d32;background:#f0fdf4}
+.btn-sm-primary{padding:5px 12px;border:1px solid #2e7d32;border-radius:6px;background:#fff;font-size:12px;font-weight:500;color:#2e7d32;cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn-sm-primary:hover,.btn-sm-primary.active{background:#2e7d32;color:#fff}
+.load-more{display:block;width:100%;padding:12px;background:#fff;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;color:#374151;cursor:pointer;margin-top:8px;transition:all .15s;text-align:center}
+.load-more:hover{border-color:#4caf50;color:#2e7d32}
+
+/* ── DETAIL PAGE ── */
+.detail-page{position:fixed;top:60px;left:0;right:0;bottom:0;z-index:100;background:#f0f2f5;overflow-y:auto;display:none}
+.detail-page.visible{display:block}
+.detail-breadcrumb{background:#fff;border-bottom:1px solid #e5e7eb;padding:11px 32px;display:flex;align-items:center;gap:8px;position:sticky;top:0;z-index:10}
+.back-btn{background:none;border:none;color:#6b7280;cursor:pointer;font-size:14px;display:flex;align-items:center;gap:6px;padding:0;font-family:inherit}
+.back-btn:hover{color:#2e7d32}
+.bc-sep{color:#d1d5db;font-size:13px}
+.bc-name{color:#111;font-weight:500;font-size:13.5px}
+.detail-body{display:grid;grid-template-columns:1fr 340px;gap:22px;max-width:1180px;margin:0 auto;padding:28px 32px 48px}
+.detail-col-left{}
+.detail-col-right{}
+
+/* Detail header */
+.d-card{background:#fff;border-radius:8px;border:1px solid #e5e7eb;padding:24px;margin-bottom:18px}
+.dh-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.d-title{font-size:24px;font-weight:800;color:#111;margin-bottom:5px;line-height:1.2}
+.d-subtitle{font-size:13.5px;color:#6b7280}
+.dh-actions{display:flex;gap:8px;flex-shrink:0}
+.btn-action{padding:7px 14px;border:1px solid #e5e7eb;border-radius:7px;background:#fff;font-size:13px;font-weight:500;color:#374151;cursor:pointer;transition:all .15s}
+.btn-action:hover{border-color:#4caf50;color:#2e7d32;background:#f0fdf4}
+.btn-action.active{border-color:#4caf50;color:#2e7d32;background:#f0fdf4}
+.btn-action-primary{padding:7px 14px;border:none;border-radius:7px;background:#2e7d32;font-size:13px;font-weight:500;color:#fff;cursor:pointer;transition:background .15s}
+.btn-action-primary:hover{background:#1b5e20}
+.btn-action-primary.active{background:#1b5e20}
+
+/* Score card */
+.score-card-top{display:flex;align-items:flex-start;gap:22px;margin-bottom:22px}
+.score-circle{width:90px;height:90px;border-radius:50%;border:4px solid #00897b;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.sc-num{font-size:28px;font-weight:800;color:#00897b;line-height:1}
+.sc-den{font-size:11px;color:#9ca3af}
+.score-info{}
+.score-likelihood{font-size:17px;font-weight:700;color:#111;margin-bottom:5px}
+.score-desc{font-size:13px;color:#6b7280;line-height:1.55}
+.section-label{font-size:10px;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:.12em;margin-bottom:14px}
+.score-bars{display:flex;flex-direction:column;gap:12px}
+.sbar-row{display:flex;align-items:center;gap:12px}
+.sbar-label{font-size:13px;color:#374151;width:210px;flex-shrink:0}
+.sbar-track{flex:1;height:8px;background:#f3f4f6;border-radius:4px;overflow:hidden}
+.sbar-fill{height:100%;border-radius:4px;transition:width .7s ease}
+.fill-green{background:#4caf50}
+.fill-blue{background:#42a5f5}
+.fill-orange{background:#ff7043}
+.sbar-val{font-size:12px;font-weight:600;color:#6b7280;width:26px;text-align:right}
+
+/* Signals */
+.signal-item{display:flex;align-items:flex-start;gap:13px;padding:13px 0;border-bottom:1px solid #f3f4f6}
+.signal-item:last-child{border-bottom:none;padding-bottom:0}
+.sig-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0;margin-top:4px}
+.sig-dot-green{background:#4caf50}
+.sig-dot-orange{background:#ff9800}
+.sig-body{flex:1}
+.sig-title{font-size:14px;font-weight:600;color:#111;margin-bottom:3px}
+.sig-desc{font-size:13px;color:#6b7280;line-height:1.5}
+.sig-badge{padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;flex-shrink:0;margin-top:2px}
+.sig-strong{background:#e8f5e9;color:#2e7d32}
+.sig-risk{background:#fff3e0;color:#e65100}
+
+/* AI Card */
+.ai-header{font-size:15px;font-weight:700;color:#111;margin-bottom:3px}
+.ai-sub{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#00897b;margin-bottom:14px}
+.ai-box{background:#f3f0fa;border-radius:6px;padding:16px;font-size:13.5px;color:#3e3e5c;line-height:1.75;font-style:italic}
+
+/* Right column */
+.rc-label{font-size:10px;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:.12em;margin-bottom:14px}
+.info-row{display:flex;justify-content:space-between;align-items:baseline;padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:13px}
+.info-row:last-child{border-bottom:none}
+.info-key{color:#9ca3af}
+.info-val{font-weight:600;color:#111;text-align:right;max-width:58%;word-break:break-word}
+.status-active{color:#2e7d32}
+.src-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:13px}
+.src-row:last-child{border-bottom:none}
+.src-name{color:#374151}
+.pill-verified{padding:2px 9px;border-radius:20px;background:#e8f5e9;color:#2e7d32;font-size:11px;font-weight:600}
+.tags-cloud{display:flex;flex-wrap:wrap;gap:6px}
+.tag-gray{padding:4px 10px;border-radius:20px;background:#f3f4f6;color:#374151;font-size:12px}
+.notes-textarea{width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;resize:vertical;min-height:80px;outline:none;font-family:inherit;color:#374151;line-height:1.5}
+.notes-textarea:focus{border-color:#4caf50}
+.btn-save-note{margin-top:8px;padding:7px 16px;border:none;border-radius:6px;background:#2e7d32;color:#fff;font-size:13px;font-weight:500;cursor:pointer}
+.btn-save-note:hover{background:#1b5e20}
+.note-saved{font-size:12px;color:#4caf50;margin-top:6px;display:none}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;right:24px;z-index:9999;background:#1a1a2e;color:#fff;padding:12px 20px;border-radius:8px;font-size:14px;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;max-width:300px}
+.toast.show{opacity:1;transform:translateY(0)}
+</style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="nav-logo">SearchFund</div>
+  <div class="nav-links">
+    <button class="nav-link active" id="navDashboard" onclick="switchView('dashboard')">Dashboard</button>
+    <button class="nav-link" id="navSaved" onclick="switchView('saved')">Saved</button>
+    <button class="nav-link" id="navPipeline" onclick="switchView('pipeline')">Pipeline</button>
+  </div>
+  <div class="nav-avatar">MM</div>
+</nav>
+
+<div class="app-container">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-head">
+      <span class="sidebar-title">Filters</span>
+      <button class="btn-clear" onclick="clearAllFilters()">Clear all</button>
+    </div>
+
+    <!-- INDUSTRY -->
+    <div class="filter-section">
+      <div class="filter-label">Industry</div>
+      <label class="cb-row"><input type="checkbox" name="industry" value="hvac"> HVAC &amp; Plumbing</label>
+      <label class="cb-row"><input type="checkbox" name="industry" value="construction"> Construction</label>
+      <label class="cb-row"><input type="checkbox" name="industry" value="manufacturing"> Manufacturing</label>
+      <label class="cb-row"><input type="checkbox" name="industry" value="pestcontrol"> Pest Control</label>
+      <label class="cb-row"><input type="checkbox" name="industry" value="landscaping"> Landscaping</label>
+      <label class="cb-row"><input type="checkbox" name="industry" value="auto"> Auto Services</label>
+    </div>
+    <hr class="filter-divider">
+
+    <!-- GEOGRAPHY -->
+    <div class="filter-section">
+      <div class="filter-label">Geography</div>
+      <label class="cb-row"><input type="checkbox" name="geography" value="southeast"> Southeast</label>
+      <label class="cb-row"><input type="checkbox" name="geography" value="midwest"> Midwest</label>
+      <label class="cb-row"><input type="checkbox" name="geography" value="northeast"> Northeast</label>
+      <label class="cb-row"><input type="checkbox" name="geography" value="southwest"> Southwest</label>
+    </div>
+    <hr class="filter-divider">
+
+    <!-- YEARS IN BUSINESS -->
+    <div class="filter-section">
+      <div class="filter-label">Years in Business</div>
+      <div class="slider-wrap">
+        <input type="range" id="yearsSlider" min="5" max="20" value="5" oninput="onSlider('years',this)">
+        <div class="slider-meta"><span>5 yrs</span><span>Min: <strong id="yearsVal">5+</strong> yrs</span><span>20+ yrs</span></div>
+      </div>
+    </div>
+    <hr class="filter-divider">
+
+    <!-- MIN SCORE -->
+    <div class="filter-section">
+      <div class="filter-label">Min. Acquisition Score</div>
+      <div class="slider-wrap">
+        <input type="range" id="scoreSlider" min="0" max="100" value="0" oninput="onSlider('score',this)">
+        <div class="slider-meta"><span>0</span><span>Min: <strong id="scoreVal">0</strong></span><span>100</span></div>
+      </div>
+    </div>
+    <hr class="filter-divider">
+
+    <!-- SIGNALS -->
+    <div class="filter-section">
+      <div class="filter-label">Signals</div>
+      <label class="cb-row"><input type="checkbox" name="signal" value="highscore"> High score (75+)</label>
+      <label class="cb-row"><input type="checkbox" name="signal" value="stable"> Stable business (5+ yrs)</label>
+      <label class="cb-row"><input type="checkbox" name="signal" value="active"> Active status</label>
+      <label class="cb-row"><input type="checkbox" name="signal" value="govcontract"> Gov. contract history</label>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+    <div class="search-sort-row">
+      <input class="search-input" type="text" id="searchInput" placeholder="Search by company name or industry…" oninput="debounceFilter()">
+      <div class="results-meta">
+        <span class="results-count" id="resultsCount">Loading…</span>
+        <select class="sort-select" id="sortSelect" onchange="applyFilters()">
+          <option value="score_desc">Score: High → Low</option>
+          <option value="score_asc">Score: Low → High</option>
+          <option value="name_asc">Name: A–Z</option>
+          <option value="award_desc">Award: High → Low</option>
+        </select>
+      </div>
+    </div>
+    <div id="companiesList"><div class="loading-state"><div class="spinner"></div><p>Loading companies…</p></div></div>
+    <button class="load-more" id="loadMoreBtn" style="display:none" onclick="loadMoreCards()">Load more</button>
+  </main>
+</div>
+
+<!-- DETAIL PAGE -->
+<div class="detail-page" id="detailPage">
+  <div class="detail-breadcrumb">
+    <button class="back-btn" onclick="closeDetail()">← Back</button>
+    <span class="bc-sep">/</span>
+    <span class="bc-name" id="bcName"></span>
+  </div>
+  <div class="detail-body" id="detailBody"></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+const API = 'http://localhost:8000';
+let allCompanies = [];
+let filteredCompanies = [];
+let displayedCount = 0;
+const BATCH = 30;
+let filterTimer = null;
+let currentView = 'dashboard';
+
+// Persist state in localStorage
+let savedIds   = new Set(JSON.parse(localStorage.getItem('sf_saved')   || '[]'));
+let pipelineIds= new Set(JSON.parse(localStorage.getItem('sf_pipeline')|| '[]'));
+
+// ── GEOGRAPHY ──
+const REGIONS = {
+  southeast: new Set(['FL','GA','AL','MS','TN','SC','NC','VA']),
+  midwest:   new Set(['OH','IN','IL','MI','WI','MN','IA','MO']),
+  northeast: new Set(['NY','PA','NJ','MA','CT','ME','VT','NH','RI']),
+  southwest: new Set(['TX','AZ','NM','CO','NV']),
+};
+const REGION_LABELS = { southeast:'Southeast', midwest:'Midwest', northeast:'Northeast', southwest:'Southwest' };
+const STATE_NAMES = {
+  AL:'Alabama',AK:'Alaska',AZ:'Arizona',AR:'Arkansas',CA:'California',CO:'Colorado',
+  CT:'Connecticut',DE:'Delaware',FL:'Florida',GA:'Georgia',HI:'Hawaii',ID:'Idaho',
+  IL:'Illinois',IN:'Indiana',IA:'Iowa',KS:'Kansas',KY:'Kentucky',LA:'Louisiana',
+  ME:'Maine',MD:'Maryland',MA:'Massachusetts',MI:'Michigan',MN:'Minnesota',
+  MS:'Mississippi',MO:'Missouri',MT:'Montana',NE:'Nebraska',NV:'Nevada',
+  NH:'New Hampshire',NJ:'New Jersey',NM:'New Mexico',NY:'New York',NC:'North Carolina',
+  ND:'North Dakota',OH:'Ohio',OK:'Oklahoma',OR:'Oregon',PA:'Pennsylvania',
+  RI:'Rhode Island',SC:'South Carolina',SD:'South Dakota',TN:'Tennessee',TX:'Texas',
+  UT:'Utah',VT:'Vermont',VA:'Virginia',WA:'Washington',WV:'West Virginia',
+  WI:'Wisconsin',WY:'Wyoming',DC:'Washington D.C.'
+};
+
+// ── INDUSTRY ──
+const IND_KEYWORDS = {
+  hvac:         ['HEATING','PLUMBING','AIR CONDITION','HVAC','PIPEFITTING','TEMPERATURE CONTROL','MECHANICAL CONTRACTOR'],
+  construction: ['CONSTRUCTION','CONTRACTOR','ROOFING','PAVING','MASONRY','CONCRETE','DRYWALL','FLOORING','SITE PREPARATION','FRAMING','SIDING','CARPENTRY','ELECTRICIAN','ELECTRICAL SERVICE'],
+  manufacturing:['MANUFACTUR','FABRICAT','MACHINING','METALWORK','WELDING'],
+  pestcontrol:  ['PEST','EXTERMINATING','FUMIGAT'],
+  landscaping:  ['LANDSCAP','LAWN','GROUNDSKEEP','VEGETATION MANAGEMENT','IRRIGATION'],
+  auto:         ['AUTOMOTIVE','AUTO REPAIR','CAR WASH','BODY SHOP','TRANSMISSION REPAIR','VEHICLE REPAIR','PARKING SERVICE'],
+};
+const NAICS_EXACT = {'238220':'hvac','561710':'pestcontrol','561730':'landscaping','811111':'auto','811113':'auto','811118':'auto','811121':'auto','811192':'auto','811310':'auto'};
+const IND_LABELS  = {hvac:'HVAC & Plumbing',construction:'Construction',manufacturing:'Manufacturing',pestcontrol:'Pest Control',landscaping:'Landscaping',auto:'Auto Services'};
+const IND_SCORES  = {hvac:90,pestcontrol:85,construction:80,landscaping:75,auto:75,manufacturing:65};
+
+function getIndustryType(c) {
+  const n = String(c.naics_code||'').trim();
+  if (n && NAICS_EXACT[n]) return NAICS_EXACT[n];
+  if (/^2382/.test(n))              return 'hvac';
+  if (/^(236|237|238)/.test(n))    return 'construction';
+  if (/^(31|32|33)/.test(n))       return 'manufacturing';
+  if (/^56171/.test(n))            return 'pestcontrol';
+  if (/^56173/.test(n))            return 'landscaping';
+  if (/^811/.test(n))              return 'auto';
+  // SIC ranges
+  const s = parseInt(c.sic_code||'');
+  if (!isNaN(s)) {
+    if (s===1711)               return 'hvac';
+    if (s>=1500&&s<=1799)       return 'construction';
+    if (s>=2000&&s<=3999)       return 'manufacturing';
+    if (s===7342)               return 'pestcontrol';
+    if (s>=781&&s<=783)         return 'landscaping';
+    if (s>=7500&&s<=7549)       return 'auto';
+  }
+  const sec = (c.industry_sector||'').toUpperCase();
+  for (const [type,kws] of Object.entries(IND_KEYWORDS))
+    if (kws.some(k=>sec.includes(k))) return type;
+  return null;
+}
+
+function getRegion(state) {
+  if (!state) return null;
+  const s = state.toUpperCase();
+  for (const [r,set] of Object.entries(REGIONS)) if (set.has(s)) return r;
+  return null;
+}
+
+function getYears(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  if (isNaN(d)) return null;
+  return Math.floor((Date.now()-d)/(365.25*86400000));
+}
+
+function getEmployees(c) {
+  const ec = c.employee_count;
+  if (ec==null||ec==='') return null;
+  const n = parseInt(String(ec).replace(/,/g,''));
+  return isNaN(n)?null:n;
+}
+
+function fmtMoney(amt) {
+  if (!amt) return null;
+  if (amt>=1e9) return '$'+(amt/1e9).toFixed(1)+'B';
+  if (amt>=1e6) return '$'+(amt/1e6).toFixed(1)+'M';
+  if (amt>=1e3) return '$'+(amt/1e3).toFixed(0)+'K';
+  return '$'+amt.toFixed(0);
+}
+
+function badgeClass(score) {
+  return score>=75?'badge-green':score>=50?'badge-yellow':'badge-orange';
+}
+
+function scoreTier(score) {
+  return score>=75?'strong':score>=50?'moderate':'developing';
+}
+
+function pct(v,min,max) { return Math.round(Math.min(100,(v-min)/(max-min)*100)); }
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── FETCH ALL COMPANIES ──
+async function fetchAll() {
+  try {
+    const first = await fetch(`${API}/companies?page=1&page_size=200`).then(r=>r.json());
+    allCompanies = first.results||[];
+    const pages = first.pages||1;
+    if (pages>1) {
+      const reqs = [];
+      for (let p=2;p<=pages;p++) reqs.push(fetch(`${API}/companies?page=${p}&page_size=200`).then(r=>r.json()));
+      const rest = await Promise.all(reqs);
+      rest.forEach(r=>{ allCompanies=allCompanies.concat(r.results||[]); });
+    }
+    applyFilters();
+  } catch(e) {
+    document.getElementById('companiesList').innerHTML=`<div class="empty-state"><h3>Could not connect to API</h3><p>Make sure the server is running: <code>python3 -m uvicorn main:app</code></p></div>`;
+    document.getElementById('resultsCount').textContent='0 companies';
+  }
+}
+
+// ── FILTER + SORT ──
+function applyFilters() {
+  const search    = document.getElementById('searchInput').value.toLowerCase().trim();
+  const minScore  = parseInt(document.getElementById('scoreSlider').value)||0;
+  const minYears  = parseInt(document.getElementById('yearsSlider').value)||5;
+  const industries= [...document.querySelectorAll('input[name=industry]:checked')].map(e=>e.value);
+  const geos      = [...document.querySelectorAll('input[name=geography]:checked')].map(e=>e.value);
+  const signals   = [...document.querySelectorAll('input[name=signal]:checked')].map(e=>e.value);
+  const sortBy    = document.getElementById('sortSelect').value;
+
+  let pool = currentView==='saved'
+    ? allCompanies.filter(c=>savedIds.has(c.id))
+    : allCompanies;
+
+  filteredCompanies = pool.filter(c=>{
+    if (search && !(c.company_name||'').toLowerCase().includes(search) &&
+                  !(c.industry_sector||'').toLowerCase().includes(search)) return false;
+    if ((c.acquisition_score||0)<minScore) return false;
+    if (industries.length) {
+      const t=getIndustryType(c);
+      if (!t||!industries.includes(t)) return false;
+    }
+    if (geos.length) {
+      const r=getRegion(c.state);
+      if (!r||!geos.includes(r)) return false;
+    }
+    const years=getYears(c.date_of_inc);
+    if (minYears>5 && (years==null||years<minYears)) return false;
+    if (signals.includes('highscore')  && (c.acquisition_score||0)<75)            return false;
+    if (signals.includes('stable')     && (years==null||years<5))                 return false;
+    if (signals.includes('active')     && c.business_status!=='active')           return false;
+    if (signals.includes('govcontract')&& (!c.award_amount||c.award_amount<=0))   return false;
+    return true;
+  });
+
+  filteredCompanies.sort((a,b)=>{
+    if (sortBy==='score_desc') return (b.acquisition_score||0)-(a.acquisition_score||0);
+    if (sortBy==='score_asc')  return (a.acquisition_score||0)-(b.acquisition_score||0);
+    if (sortBy==='name_asc')   return (a.company_name||'').localeCompare(b.company_name||'');
+    if (sortBy==='award_desc') return (b.award_amount||0)-(a.award_amount||0);
+    return 0;
+  });
+
+  displayedCount=0;
+  document.getElementById('companiesList').innerHTML='';
+  document.getElementById('resultsCount').textContent=`${filteredCompanies.length.toLocaleString()} companies`;
+  renderNextBatch();
+}
+
+function renderNextBatch() {
+  const batch=filteredCompanies.slice(displayedCount,displayedCount+BATCH);
+  const list=document.getElementById('companiesList');
+  if (batch.length===0 && displayedCount===0) {
+    list.innerHTML=`<div class="empty-state"><h3>No companies match your filters</h3><p>Try adjusting the sliders or clearing some filters.</p></div>`;
+    document.getElementById('loadMoreBtn').style.display='none';
+    return;
+  }
+  list.innerHTML += batch.map(renderCard).join('');
+  displayedCount += batch.length;
+  const remaining = filteredCompanies.length-displayedCount;
+  const btn = document.getElementById('loadMoreBtn');
+  if (remaining>0) { btn.style.display='block'; btn.textContent=`Load more (${remaining.toLocaleString()} remaining)`; }
+  else btn.style.display='none';
+}
+
+function loadMoreCards() { renderNextBatch(); }
+
+// ── RENDER CARD ──
+function renderCard(c) {
+  const score   = c.acquisition_score||0;
+  const years   = getYears(c.date_of_inc);
+  const emp     = getEmployees(c);
+  const itype   = getIndustryType(c);
+  const isSaved = savedIds.has(c.id);
+  const inPipe  = pipelineIds.has(c.id);
+
+  const location = [c.city, c.state].filter(Boolean).join(', ') || 'Location unknown';
+  const industry = c.industry_sector || IND_LABELS[itype] || 'Unknown industry';
+
+  // Stats row
+  const stats = [
+    { ok: years!=null, text: years!=null?`${years} yrs in business`:'— yrs in business' },
+    { ok: emp!=null,   text: emp!=null?`${emp.toLocaleString()} employees`:'— employees' },
+    { ok: !!c.award_amount, text: c.award_amount?`~${fmtMoney(c.award_amount)} revenue`:'— revenue' },
+  ];
+
+  // Tags
+  const tags=[];
+  if (score>=75)           tags.push(['High score','tag-green']);
+  if (years!=null&&years>=20) tags.push([`${years} yrs in business`,'tag-teal']);
+  if (emp!=null&&emp>=10&&emp<=75) tags.push(['Optimal size','tag-teal']);
+  if (c.award_amount>500000)   tags.push(['Gov. contracts','tag-green']);
+  if (itype==='hvac'||itype==='pestcontrol') tags.push(['Top SF target','tag-teal']);
+
+  return `<div class="company-card">
+    <div class="card-row1">
+      <div class="card-name">${esc(c.company_name||'Unknown Company')}</div>
+      <div class="score-badge ${badgeClass(score)}">
+        <div class="score-num">${score}</div>
+        <div class="score-lbl">acq. score</div>
+      </div>
+    </div>
+    <div class="card-row2">${esc(industry)} &middot; ${esc(location)}</div>
+    <div class="card-row3">
+      ${stats.map(s=>`<div class="card-stat">
+        <span class="${s.ok?'stat-ok':'stat-na'}">${s.ok?'✓':'−'}</span>
+        <span>${esc(s.text)}</span>
+      </div>`).join('')}
+    </div>
+    ${tags.length?`<div class="card-tags">${tags.map(([l,cls])=>`<span class="tag ${cls}">${l}</span>`).join('')}</div>`:''}
+    <div class="card-footer">
+      <div class="card-source">Source: ${esc(c.source||'Unknown')}</div>
+      <div class="card-actions">
+        <button class="btn-sm${isSaved?' active':''}" onclick="toggleSave(${c.id},this)">${isSaved?'♥ Saved':'♡ Save'}</button>
+        <button class="btn-sm" onclick="showDetail(${c.id})">View details</button>
+        <button class="btn-sm-primary${inPipe?' active':''}" onclick="addToPipeline(${c.id},this)">${inPipe?'✓ In Pipeline':'+ Pipeline'}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── SAVE / PIPELINE ──
+function toggleSave(id, btn) {
+  if (savedIds.has(id)) {
+    savedIds.delete(id);
+    btn.textContent='♡ Save'; btn.classList.remove('active');
+    showToast('Removed from saved');
+  } else {
+    savedIds.add(id);
+    btn.textContent='♥ Saved'; btn.classList.add('active');
+    showToast('Company saved');
+  }
+  localStorage.setItem('sf_saved', JSON.stringify([...savedIds]));
+}
+
+async function addToPipeline(id, btn) {
+  if (pipelineIds.has(id)) { showToast('Already in pipeline'); return; }
+  try {
+    const r = await fetch(`${API}/pipeline`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({company_id:id,status:'prospect'}) });
+    if (!r.ok) throw new Error(await r.text());
+    pipelineIds.add(id);
+    localStorage.setItem('sf_pipeline', JSON.stringify([...pipelineIds]));
+    if (btn) { btn.textContent='✓ In Pipeline'; btn.classList.add('active'); }
+    showToast('Added to pipeline');
+  } catch(e) { showToast('Failed to add to pipeline'); }
+}
+
+// ── DETAIL PAGE ──
+async function showDetail(id) {
+  const company = await fetch(`${API}/companies/${id}`).then(r=>r.json());
+  renderDetail(company);
+  document.getElementById('detailPage').classList.add('visible');
+  document.getElementById('detailPage').scrollTop=0;
+  document.getElementById('bcName').textContent = company.company_name||'Company';
+}
+
+function closeDetail() {
+  document.getElementById('detailPage').classList.remove('visible');
+}
+
+function renderDetail(c) {
+  const score     = c.acquisition_score||0;
+  const years     = getYears(c.date_of_inc);
+  const emp       = getEmployees(c);
+  const itype     = getIndustryType(c);
+  const region    = getRegion(c.state);
+  const foundedYr = c.date_of_inc ? new Date(c.date_of_inc).getFullYear() : null;
+  const isSaved   = savedIds.has(c.id);
+  const inPipe    = pipelineIds.has(c.id);
+
+  const subtitle  = [c.city&&c.state?`${c.city}, ${c.state}`:c.city||c.state, c.industry_sector, foundedYr?`Est. ${foundedYr}`:null].filter(Boolean).join(' · ');
+
+  // Score breakdown
+  const indScore  = IND_SCORES[itype]||50;
+  const sizeScore = emp==null?55:(emp>=10&&emp<=75?85:emp<10?60:emp<=150?70:45);
+  const stabScore = years==null?50:(years>=20?90:years>=15?80:years>=10?70:years>=5?55:35);
+  const geoScore  = {southeast:85,midwest:80,southwest:75,northeast:70}[region]||60;
+  const govScore  = !c.award_amount?30:c.award_amount>2e6?90:c.award_amount>5e5?75:c.award_amount>5e4?55:40;
+  const bars=[
+    ['Industry attractiveness',  indScore ],
+    ['Size fit for search fund',  sizeScore],
+    ['Business stability',        stabScore],
+    ['Geographic desirability',   geoScore ],
+    ['Gov. contract history',     govScore ],
+  ];
+
+  // Percentile rough estimate
+  const aboveCount = allCompanies.filter(cc=>(cc.acquisition_score||0)<score).length;
+  const pctile = allCompanies.length>0?Math.round(aboveCount/allCompanies.length*100):0;
+
+  const likelihood = score>=75?'Very high acquisition likelihood':score>=50?'Moderate acquisition likelihood':'Lower acquisition likelihood';
+
+  // Signals
+  const signals=[];
+  if (itype==='hvac')
+    signals.push({green:true, title:'Fragmented industry with consolidation activity', desc:'HVAC services are a top search fund target. Strong acquisition history in this vertical.'});
+  if (itype==='pestcontrol')
+    signals.push({green:true, title:'High-demand recurring service industry', desc:'Pest control businesses have predictable recurring revenue and low customer churn, ideal for search fund acquisition.'});
+  if (years!=null&&years>=15)
+    signals.push({green:true, title:`Long operating history — ${years} years`, desc:'Continuous operation suggests a mature, stable business with established customer relationships.'});
+  if (emp!=null&&emp>=10&&emp<=75)
+    signals.push({green:true, title:'Optimal employee count for acquisition', desc:'Businesses in this size range are typically owner-operated and within search fund deal size parameters.'});
+  if (c.award_amount>500000)
+    signals.push({green:true, title:'Government contract history', desc:'Verified government contracts suggest stable, recurring revenue and creditworthy customers.'});
+  if (score>=75)
+    signals.push({green:true, title:'High overall acquisition score', desc:'This company ranks in the top tier of our database across all weighted factors.'});
+  if (emp!=null&&(emp<10||emp>150))
+    signals.push({green:false, title:'Staffing concentration risk', desc:'Very small or large employee count may indicate owner dependency or complexity beyond typical search fund parameters.'});
+  if (signals.length===0)
+    signals.push({green:false, title:'Limited data available', desc:'Additional diligence required. Key fields such as employee count and founding date are not available in the current dataset.'});
+
+  // Rev range
+  const revRange = c.award_amount ? `${fmtMoney(c.award_amount*0.9)}–${fmtMoney(c.award_amount*1.1)}` : 'N/A';
+
+  // AI Summary
+  const regionName = REGION_LABELS[region]||'national';
+  const indName    = IND_LABELS[itype]||c.industry_sector||'services';
+  const yrsText    = years!=null?`${years} years`:'an undisclosed number of years';
+  const empText    = emp!=null?`${emp} employees`:'an unspecified number of employees';
+  const govText    = c.award_amount>500000?' Government contract history suggests stable, recurring revenue.':'';
+  const indText    = indScore>=80?' The industry shows strong consolidation activity, with buyers actively seeking similar businesses.':'';
+  const aiSummary  = `${c.company_name||'This company'} is a ${scoreTier(score)} acquisition candidate for a search fund operator targeting the ${regionName} ${indName.toLowerCase()} market. With ${yrsText} of operation and ${empText}, this business falls within typical search fund acquisition parameters.${govText}${indText} Key areas for further diligence include owner succession planning and EBITDA verification.`;
+
+  // Notes from localStorage
+  const notesKey = `sf_notes_${c.id}`;
+  const savedNote = localStorage.getItem(notesKey)||'';
+
+  // Data sources
+  const hasSEC  = (c.source||'').toLowerCase().includes('sec');
+  const hasUSA  = (c.source||'').toLowerCase().includes('usaspending');
+  const lastUpd = c.scraped_at ? (() => {
+    const d=new Date(c.scraped_at);
+    return d.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  })() : 'Unknown';
+
+  // Right column tags
+  const rcTags=[];
+  if (itype) rcTags.push(IND_LABELS[itype]);
+  if (c.state) rcTags.push(STATE_NAMES[c.state.toUpperCase()]||c.state);
+  if (score>=75) rcTags.push('High score');
+  if (years!=null) rcTags.push(`${years} yrs`);
+  if (c.business_status==='active') rcTags.push('Active');
+  if (c.award_amount>0) rcTags.push('Gov. contracts');
+
+  document.getElementById('detailBody').innerHTML = `
+    <div class="detail-col-left">
+      <!-- Header -->
+      <div class="d-card">
+        <div class="dh-top">
+          <div>
+            <div class="d-title">${esc(c.company_name||'Unknown Company')}</div>
+            <div class="d-subtitle">${esc(subtitle)||'&nbsp;'}</div>
+          </div>
+          <div class="dh-actions">
+            <button class="btn-action${isSaved?' active':''}" id="detSaveBtn" onclick="detToggleSave(${c.id})">${isSaved?'♥ Saved':'♡ Save'}</button>
+            <button class="btn-action" onclick="showToast('Share link copied!')">↗ Share</button>
+            <button class="btn-action-primary${inPipe?' active':''}" id="detPipeBtn" onclick="detAddPipeline(${c.id})">${inPipe?'✓ In Pipeline':'+ Add to Pipeline'}</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Score Card -->
+      <div class="d-card">
+        <div class="section-label">Acquisition Likelihood</div>
+        <div class="score-card-top">
+          <div class="score-circle">
+            <div class="sc-num">${score}</div>
+            <div class="sc-den">/ 100</div>
+          </div>
+          <div class="score-info">
+            <div class="score-likelihood">${likelihood}</div>
+            <div class="score-desc">This company scores in the top ${pctile}% of our database based on industry, size, and operational signals.</div>
+          </div>
+        </div>
+        <div class="section-label">Score Breakdown</div>
+        <div class="score-bars">
+          ${bars.map(([label,val])=>`
+            <div class="sbar-row">
+              <div class="sbar-label">${label}</div>
+              <div class="sbar-track"><div class="sbar-fill ${val>=80?'fill-green':val>=60?'fill-blue':'fill-orange'}" style="width:${val}%"></div></div>
+              <div class="sbar-val">${val}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- Signals -->
+      <div class="d-card">
+        <div class="section-label">Acquisition Signals</div>
+        ${signals.map(s=>`
+          <div class="signal-item">
+            <div class="sig-dot ${s.green?'sig-dot-green':'sig-dot-orange'}"></div>
+            <div class="sig-body">
+              <div class="sig-title">${esc(s.title)}</div>
+              <div class="sig-desc">${esc(s.desc)}</div>
+            </div>
+            <span class="sig-badge ${s.green?'sig-strong':'sig-risk'}">${s.green?'Strong':'Moderate risk'}</span>
+          </div>
+        `).join('')}
+      </div>
+
+      <!-- AI Summary -->
+      <div class="d-card">
+        <div class="ai-header">AI Summary</div>
+        <div class="ai-sub">Generated by SearchFund AI</div>
+        <div class="ai-box">${esc(aiSummary)}</div>
+      </div>
+    </div>
+
+    <div class="detail-col-right">
+      <!-- Company Info -->
+      <div class="info-card">
+        <div class="rc-label">Company Info</div>
+        ${[
+          ['Founded',         foundedYr||'N/A'],
+          ['Years operating', years!=null?`${years} years`:'N/A'],
+          ['Employees',       emp!=null?`~${emp.toLocaleString()}`:'N/A'],
+          ['Est. revenue',    revRange],
+          ['Industry',        c.industry_sector||'N/A'],
+          ['NAICS code',      c.naics_code||'N/A'],
+          ['State of inc.',   STATE_NAMES[String(c.state_of_inc||'').toUpperCase()]||c.state_of_inc||'N/A'],
+          ['Entity type',     c.business_type||'N/A'],
+          ['Status',          c.business_status||'N/A'],
+        ].map(([k,v])=>`
+          <div class="info-row">
+            <span class="info-key">${k}</span>
+            <span class="info-val${k==='Status'&&v==='active'?' status-active':''}">${esc(v)}</span>
+          </div>`).join('')}
+      </div>
+
+      <!-- Data Sources -->
+      <div class="info-card">
+        <div class="rc-label">Data Sources</div>
+        ${hasSEC?`<div class="src-row"><span class="src-name">SEC EDGAR</span><span class="pill-verified">Verified</span></div>`:''}
+        ${hasUSA?`<div class="src-row"><span class="src-name">USASpending.gov</span><span class="pill-verified">Verified</span></div>`:''}
+        <div class="src-row"><span class="src-name" style="color:#9ca3af">Last updated</span><span style="font-size:13px;color:#374151">${lastUpd}</span></div>
+      </div>
+
+      <!-- Tags -->
+      <div class="info-card">
+        <div class="rc-label">Tags</div>
+        <div class="tags-cloud">
+          ${rcTags.map(t=>`<span class="tag-gray">${esc(t)}</span>`).join('')||'<span style="color:#9ca3af;font-size:13px">No tags</span>'}
+        </div>
+      </div>
+
+      <!-- Notes -->
+      <div class="info-card">
+        <div class="rc-label">Your Notes</div>
+        <textarea class="notes-textarea" id="notesArea" placeholder="Add private notes about this company…">${esc(savedNote)}</textarea>
+        <button class="btn-save-note" onclick="saveNote(${c.id})">Save note</button>
+        <div class="note-saved" id="noteSaved">Note saved!</div>
+      </div>
+    </div>
+  `;
+}
+
+function detToggleSave(id) {
+  const btn=document.getElementById('detSaveBtn');
+  if (savedIds.has(id)) {
+    savedIds.delete(id); btn.textContent='♡ Save'; btn.classList.remove('active');
+    showToast('Removed from saved');
+  } else {
+    savedIds.add(id); btn.textContent='♥ Saved'; btn.classList.add('active');
+    showToast('Company saved');
+  }
+  localStorage.setItem('sf_saved',JSON.stringify([...savedIds]));
+}
+
+async function detAddPipeline(id) {
+  const btn=document.getElementById('detPipeBtn');
+  if (pipelineIds.has(id)) { showToast('Already in pipeline'); return; }
+  await addToPipeline(id, null);
+  if (pipelineIds.has(id)) { btn.textContent='✓ In Pipeline'; btn.classList.add('active'); }
+}
+
+function saveNote(id) {
+  const val=document.getElementById('notesArea').value;
+  localStorage.setItem(`sf_notes_${id}`,val);
+  const msg=document.getElementById('noteSaved');
+  msg.style.display='block';
+  setTimeout(()=>msg.style.display='none',2000);
+}
+
+// ── VIEWS ──
+function switchView(view) {
+  currentView=view;
+  document.querySelectorAll('.nav-link').forEach(l=>l.classList.remove('active'));
+  document.getElementById('nav'+view.charAt(0).toUpperCase()+view.slice(1))?.classList.add('active');
+  if (view==='pipeline') { loadPipelineView(); return; }
+  applyFilters();
+}
+
+async function loadPipelineView() {
+  const list=document.getElementById('companiesList');
+  list.innerHTML='<div class="loading-state"><div class="spinner"></div><p>Loading pipeline…</p></div>';
+  document.getElementById('loadMoreBtn').style.display='none';
+  document.getElementById('resultsCount').textContent='Loading…';
+  try {
+    const data=await fetch(`${API}/pipeline`).then(r=>r.json());
+    const rows=data.results||[];
+    document.getElementById('resultsCount').textContent=`${rows.length} in pipeline`;
+    if (rows.length===0) {
+      list.innerHTML='<div class="empty-state"><h3>Your pipeline is empty</h3><p>Click "+ Pipeline" on any company card to add it here.</p></div>';
+      return;
+    }
+    list.innerHTML=rows.map(r=>`
+      <div class="company-card">
+        <div class="card-row1">
+          <div class="card-name">${esc(r.company_name||'Unknown')}</div>
+          <div class="score-badge ${badgeClass(r.acquisition_score||0)}">
+            <div class="score-num">${r.acquisition_score||0}</div>
+            <div class="score-lbl">acq. score</div>
+          </div>
+        </div>
+        <div class="card-row2">${esc(r.industry_sector||'Unknown industry')} &middot; ${esc([r.city,r.state].filter(Boolean).join(', ')||'Location unknown')}</div>
+        <div class="card-row3">
+          <div class="card-stat"><span class="${r.award_amount?'stat-ok':'stat-na'}">${r.award_amount?'✓':'−'}</span><span>${r.award_amount?`~${fmtMoney(r.award_amount)} revenue`:'— revenue'}</span></div>
+        </div>
+        <div class="card-footer">
+          <div class="card-source">Added: ${r.date_added} &nbsp;·&nbsp; Status: <strong>${r.status}</strong></div>
+          <div class="card-actions">
+            <button class="btn-sm" onclick="showDetail(${r.company_id})">View details</button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {
+    list.innerHTML='<div class="empty-state"><h3>Could not load pipeline</h3><p>Make sure the API server is running.</p></div>';
+  }
+}
+
+// ── SLIDERS ──
+function onSlider(type, el) {
+  const min=parseInt(el.min), max=parseInt(el.max), val=parseInt(el.value);
+  el.style.setProperty('--pct', `${(val-min)/(max-min)*100}%`);
+  if (type==='years') document.getElementById('yearsVal').textContent = val>=20?'20+':val;
+  if (type==='score') document.getElementById('scoreVal').textContent = val;
+  debounceFilter();
+}
+
+function initSlider(id) {
+  const el=document.getElementById(id);
+  const val=parseInt(el.value), min=parseInt(el.min), max=parseInt(el.max);
+  el.style.setProperty('--pct',`${(val-min)/(max-min)*100}%`);
+}
+
+function debounceFilter() {
+  clearTimeout(filterTimer);
+  filterTimer=setTimeout(applyFilters,180);
+}
+
+function clearAllFilters() {
+  document.querySelectorAll('input[type=checkbox]').forEach(cb=>cb.checked=false);
+  document.getElementById('scoreSlider').value=0;
+  document.getElementById('yearsSlider').value=5;
+  document.getElementById('searchInput').value='';
+  initSlider('scoreSlider'); initSlider('yearsSlider');
+  document.getElementById('scoreVal').textContent='0';
+  document.getElementById('yearsVal').textContent='5';
+  applyFilters();
+}
+
+// ── TOAST ──
+let toastTimer=null;
+function showToast(msg) {
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove('show'),2500);
+}
+
+// ── INIT ──
+document.querySelectorAll('input[name=industry],input[name=geography],input[name=signal]')
+  .forEach(cb=>cb.addEventListener('change',applyFilters));
+initSlider('scoreSlider');
+initSlider('yearsSlider');
+fetchAll();
+</script>
+</body>
+</html>
