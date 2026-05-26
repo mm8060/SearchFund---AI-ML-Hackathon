@@ -168,6 +168,31 @@ input[type=range]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;bac
 .btn-save-note:hover{background:#1b5e20}
 .note-saved{font-size:12px;color:#4caf50;margin-top:6px;display:none}
 
+/* ── NL SEARCH ── */
+.nl-search-row{display:flex;gap:10px;margin-bottom:12px;align-items:center}
+.nl-input{flex:1;padding:11px 16px;border:2px solid #00897b;border-radius:8px;font-size:14px;outline:none;background:#fff;transition:border-color .15s,box-shadow .15s;font-family:inherit}
+.nl-input:focus{border-color:#2e7d32;box-shadow:0 0 0 3px rgba(0,137,123,.12)}
+.btn-nl{padding:10px 18px;border:none;border-radius:8px;background:#00897b;color:#fff;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .15s;flex-shrink:0}
+.btn-nl:hover{background:#00695c}
+.btn-nl:disabled{background:#b2dfdb;cursor:not-allowed}
+.nl-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;background:#e0f2f1;border:1px solid #b2dfdb;border-radius:8px;margin-bottom:14px;font-size:13.5px;color:#00695c}
+.nl-banner strong{font-weight:600}
+.btn-nl-clear{background:none;border:1px solid #00897b;color:#00695c;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;white-space:nowrap;font-family:inherit}
+.btn-nl-clear:hover{background:#00897b;color:#fff}
+.btn-nl-spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px}
+
+/* ── AI GENERATE BUTTON ── */
+.btn-gen-ai{display:flex;align-items:center;gap:8px;padding:10px 18px;border:2px dashed #00897b;border-radius:8px;background:#f0fdf4;color:#00695c;font-size:13.5px;font-weight:600;cursor:pointer;width:100%;justify-content:center;transition:all .15s;font-family:inherit}
+.btn-gen-ai:hover{background:#e0f2f1;border-style:solid}
+.btn-gen-ai:disabled{opacity:.55;cursor:not-allowed}
+.ai-spinner{display:flex;align-items:center;justify-content:center;gap:10px;padding:18px 0;color:#6b7280;font-size:13px}
+
+/* Cluster tags */
+.tag-cluster-prime{background:#1b5e20;color:#fff}
+.tag-cluster-strong{background:#00695c;color:#fff}
+.tag-cluster-monitor{background:#f9a825;color:#4a2e00}
+.tag-cluster-low{background:#e5e7eb;color:#6b7280}
+
 /* Toast */
 .toast{position:fixed;bottom:24px;right:24px;z-index:9999;background:#1a1a2e;color:#fff;padding:12px 20px;border-radius:8px;font-size:14px;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;max-width:300px}
 .toast.show{opacity:1;transform:translateY(0)}
@@ -244,10 +269,30 @@ input[type=range]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;bac
       <label class="cb-row"><input type="checkbox" name="signal" value="active"> Active status</label>
       <label class="cb-row"><input type="checkbox" name="signal" value="govcontract"> Gov. contract history</label>
     </div>
+    <hr class="filter-divider">
+
+    <!-- CLUSTER -->
+    <div class="filter-section">
+      <div class="filter-label">Cluster</div>
+      <label class="cb-row"><input type="checkbox" name="cluster" value="Prime Target"> <span class="tag tag-cluster-prime" style="padding:2px 8px;font-size:11px">Prime Target</span></label>
+      <label class="cb-row"><input type="checkbox" name="cluster" value="Strong Prospect"> <span class="tag tag-cluster-strong" style="padding:2px 8px;font-size:11px">Strong Prospect</span></label>
+      <label class="cb-row"><input type="checkbox" name="cluster" value="Worth Monitoring"> <span class="tag tag-cluster-monitor" style="padding:2px 8px;font-size:11px">Worth Monitoring</span></label>
+      <label class="cb-row"><input type="checkbox" name="cluster" value="Low Priority"> <span class="tag tag-cluster-low" style="padding:2px 8px;font-size:11px">Low Priority</span></label>
+    </div>
   </aside>
 
   <!-- MAIN CONTENT -->
   <main class="main-content">
+    <!-- NATURAL LANGUAGE SEARCH -->
+    <div class="nl-search-row">
+      <input class="nl-input" type="text" id="nlInput" placeholder="Describe what you're looking for… e.g. HVAC companies in Texas with high scores" onkeydown="if(event.key==='Enter')runNLSearch()">
+      <button class="btn-nl" id="nlBtn" onclick="runNLSearch()">✦ AI Search</button>
+    </div>
+    <div class="nl-banner" id="nlBanner" style="display:none">
+      <span>Showing AI results for: <strong id="nlBannerText"></strong></span>
+      <button class="btn-nl-clear" onclick="clearNLSearch()">✕ Clear</button>
+    </div>
+
     <div class="search-sort-row">
       <input class="search-input" type="text" id="searchInput" placeholder="Search by company name or industry…" oninput="debounceFilter()">
       <div class="results-meta">
@@ -286,6 +331,8 @@ let displayedCount = 0;
 const BATCH = 30;
 let filterTimer = null;
 let currentView = 'dashboard';
+let nlMode = false;
+let currentDetailId = null;
 
 // Persist state in localStorage
 let savedIds   = new Set(JSON.parse(localStorage.getItem('sf_saved')   || '[]'));
@@ -389,6 +436,13 @@ function scoreTier(score) {
 
 function pct(v,min,max) { return Math.round(Math.min(100,(v-min)/(max-min)*100)); }
 
+function clusterTagClass(label) {
+  if (label==='Prime Target')     return 'tag-cluster-prime';
+  if (label==='Strong Prospect')  return 'tag-cluster-strong';
+  if (label==='Worth Monitoring') return 'tag-cluster-monitor';
+  return 'tag-cluster-low';
+}
+
 function esc(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
@@ -414,12 +468,14 @@ async function fetchAll() {
 
 // ── FILTER + SORT ──
 function applyFilters() {
+  if (nlMode) return;
   const search    = document.getElementById('searchInput').value.toLowerCase().trim();
   const minScore  = parseInt(document.getElementById('scoreSlider').value)||0;
   const minYears  = parseInt(document.getElementById('yearsSlider').value)||5;
   const industries= [...document.querySelectorAll('input[name=industry]:checked')].map(e=>e.value);
   const geos      = [...document.querySelectorAll('input[name=geography]:checked')].map(e=>e.value);
   const signals   = [...document.querySelectorAll('input[name=signal]:checked')].map(e=>e.value);
+  const clusters  = [...document.querySelectorAll('input[name=cluster]:checked')].map(e=>e.value);
   const sortBy    = document.getElementById('sortSelect').value;
 
   let pool = currentView==='saved'
@@ -444,6 +500,7 @@ function applyFilters() {
     if (signals.includes('stable')     && (years==null||years<5))                 return false;
     if (signals.includes('active')     && c.business_status!=='active')           return false;
     if (signals.includes('govcontract')&& (!c.award_amount||c.award_amount<=0))   return false;
+    if (clusters.length && !clusters.includes(c.cluster_label))                  return false;
     return true;
   });
 
@@ -505,6 +562,7 @@ function renderCard(c) {
   if (emp!=null&&emp>=10&&emp<=75) tags.push(['Optimal size','tag-teal']);
   if (c.award_amount>500000)   tags.push(['Gov. contracts','tag-green']);
   if (itype==='hvac'||itype==='pestcontrol') tags.push(['Top SF target','tag-teal']);
+  if (c.cluster_label) tags.push([c.cluster_label, clusterTagClass(c.cluster_label)]);
 
   return `<div class="company-card">
     <div class="card-row1">
@@ -573,6 +631,7 @@ function closeDetail() {
 }
 
 function renderDetail(c) {
+  currentDetailId = c.id;
   const score     = c.acquisition_score||0;
   const years     = getYears(c.date_of_inc);
   const emp       = getEmployees(c);
@@ -634,6 +693,15 @@ function renderDetail(c) {
   const govText    = c.award_amount>500000?' Government contract history suggests stable, recurring revenue.':'';
   const indText    = indScore>=80?' The industry shows strong consolidation activity, with buyers actively seeking similar businesses.':'';
   const aiSummary  = `${c.company_name||'This company'} is a ${scoreTier(score)} acquisition candidate for a search fund operator targeting the ${regionName} ${indName.toLowerCase()} market. With ${yrsText} of operation and ${empText}, this business falls within typical search fund acquisition parameters.${govText}${indText} Key areas for further diligence include owner succession planning and EBITDA verification.`;
+
+  // AI summary — use cached value from DB or show generate button
+  const aiSummaryHTML = c.ai_summary
+    ? `<div class="ai-box">${esc(c.ai_summary)}</div>`
+    : `<div id="aiSummaryContainer">
+        <button class="btn-gen-ai" id="btnGenAI" onclick="generateAISummary(${c.id})">
+          ✦ Generate AI Summary
+        </button>
+       </div>`;
 
   // Notes from localStorage
   const notesKey = `sf_notes_${c.id}`;
@@ -716,8 +784,8 @@ function renderDetail(c) {
       <!-- AI Summary -->
       <div class="d-card">
         <div class="ai-header">AI Summary</div>
-        <div class="ai-sub">Generated by SearchFund AI</div>
-        <div class="ai-box">${esc(aiSummary)}</div>
+        <div class="ai-sub">Powered by GPT-3.5 · Search Fund Analyst</div>
+        ${aiSummaryHTML}
       </div>
     </div>
 
@@ -794,6 +862,74 @@ function saveNote(id) {
   const msg=document.getElementById('noteSaved');
   msg.style.display='block';
   setTimeout(()=>msg.style.display='none',2000);
+}
+
+// ── AI SUMMARY ──
+async function generateAISummary(id) {
+  const container = document.getElementById('aiSummaryContainer');
+  const btn = document.getElementById('btnGenAI');
+  if (!container) return;
+  btn.disabled = true;
+  container.innerHTML = '<div class="ai-spinner"><div class="spinner" style="width:24px;height:24px;border-width:2px;margin:0"></div><span>Generating assessment…</span></div>';
+  try {
+    const data = await fetch(`${API}/companies/${id}/summary`).then(r => {
+      if (!r.ok) return r.json().then(e => { throw new Error(e.detail || 'API error'); });
+      return r.json();
+    });
+    container.innerHTML = `<div class="ai-box">${esc(data.summary)}</div>`;
+    // Update cached value so re-opening the detail doesn't show the button again
+    const company = allCompanies.find(c => c.id === id);
+    if (company) company.ai_summary = data.summary;
+  } catch(e) {
+    container.innerHTML = `<p style="color:#e65100;font-size:13px;padding:8px 0">⚠ ${esc(e.message)}</p>
+      <button class="btn-gen-ai" onclick="generateAISummary(${id})">Retry</button>`;
+  }
+}
+
+// ── NATURAL LANGUAGE SEARCH ──
+async function runNLSearch() {
+  const query = document.getElementById('nlInput').value.trim();
+  if (!query) return;
+  const btn = document.getElementById('nlBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="btn-nl-spinner"></span>Searching…';
+  document.getElementById('companiesList').innerHTML =
+    '<div class="loading-state"><div class="spinner"></div><p>Asking AI to interpret your search…</p></div>';
+  document.getElementById('loadMoreBtn').style.display = 'none';
+
+  try {
+    const data = await fetch(`${API}/search/natural`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({query}),
+    }).then(r => {
+      if (!r.ok) return r.json().then(e => { throw new Error(e.detail || 'API error'); });
+      return r.json();
+    });
+
+    nlMode = true;
+    filteredCompanies = data.results || [];
+    displayedCount = 0;
+    document.getElementById('companiesList').innerHTML = '';
+    document.getElementById('nlBannerText').textContent = query;
+    document.getElementById('nlBanner').style.display = 'flex';
+    document.getElementById('resultsCount').textContent =
+      `${filteredCompanies.length.toLocaleString()} AI results`;
+    renderNextBatch();
+  } catch(e) {
+    document.getElementById('companiesList').innerHTML =
+      `<div class="empty-state"><h3>AI Search failed</h3><p>${esc(e.message)}</p></div>`;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '✦ AI Search';
+  }
+}
+
+function clearNLSearch() {
+  nlMode = false;
+  document.getElementById('nlInput').value = '';
+  document.getElementById('nlBanner').style.display = 'none';
+  applyFilters();
 }
 
 // ── VIEWS ──
@@ -885,7 +1021,7 @@ function showToast(msg) {
 }
 
 // ── INIT ──
-document.querySelectorAll('input[name=industry],input[name=geography],input[name=signal]')
+document.querySelectorAll('input[name=industry],input[name=geography],input[name=signal],input[name=cluster]')
   .forEach(cb=>cb.addEventListener('change',applyFilters));
 initSlider('scoreSlider');
 initSlider('yearsSlider');
