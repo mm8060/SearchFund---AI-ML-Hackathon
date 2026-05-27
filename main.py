@@ -18,6 +18,60 @@ load_dotenv()
 DB_PATH = "companies.db"
 _anthropic: Optional[anthropic.Anthropic] = None
 
+# ---------- state normalization ----------
+
+_STATE_NAMES: dict[str, str] = {
+    "alabama":"AL","alaska":"AK","arizona":"AZ","arkansas":"AR","california":"CA",
+    "colorado":"CO","connecticut":"CT","delaware":"DE","florida":"FL","georgia":"GA",
+    "hawaii":"HI","idaho":"ID","illinois":"IL","indiana":"IN","iowa":"IA","kansas":"KS",
+    "kentucky":"KY","louisiana":"LA","maine":"ME","maryland":"MD","massachusetts":"MA",
+    "michigan":"MI","minnesota":"MN","mississippi":"MS","missouri":"MO","montana":"MT",
+    "nebraska":"NE","nevada":"NV","new hampshire":"NH","new jersey":"NJ",
+    "new mexico":"NM","new york":"NY","north carolina":"NC","north dakota":"ND",
+    "ohio":"OH","oklahoma":"OK","oregon":"OR","pennsylvania":"PA","rhode island":"RI",
+    "south carolina":"SC","south dakota":"SD","tennessee":"TN","texas":"TX","utah":"UT",
+    "vermont":"VT","virginia":"VA","washington":"WA","west virginia":"WV",
+    "wisconsin":"WI","wyoming":"WY","washington d.c.":"DC","district of columbia":"DC",
+}
+
+_REGIONS: dict[str, list[str]] = {
+    "southeast":  ["FL","GA","AL","MS","TN","SC","NC","VA"],
+    "midwest":    ["OH","IN","IL","MI","WI","MN","IA","MO"],
+    "southwest":  ["TX","AZ","NM","CO","NV"],
+    "northeast":  ["NY","PA","NJ","MA","CT","ME","VT","NH","RI"],
+    "west":       ["CA","OR","WA","ID","MT","WY","UT","NV","AZ"],
+    "south":      ["FL","GA","AL","MS","TN","SC","NC","VA","TX","LA","AR","KY","WV"],
+    "plains":     ["KS","NE","SD","ND","OK","IA","MO"],
+    "mid-atlantic":["NY","NJ","PA","DE","MD","VA","DC"],
+}
+
+
+def _normalize_states(raw) -> list[str]:
+    """Return a deduplicated list of 2-letter state abbreviations from any state value Claude returns."""
+    if not raw:
+        return []
+    if isinstance(raw, list):
+        result = []
+        for item in raw:
+            result.extend(_normalize_states(item))
+        return list(dict.fromkeys(result))
+    s = str(raw).strip().lower()
+    if s in _REGIONS:
+        return _REGIONS[s]
+    if s in _STATE_NAMES:
+        return [_STATE_NAMES[s]]
+    abbrev = s.upper()
+    if len(abbrev) == 2 and abbrev.isalpha():
+        return [abbrev]
+    return []
+
+
+def _strip_code_fences(text: str) -> str:
+    """Remove markdown code fences Claude sometimes wraps JSON in."""
+    text = re.sub(r"^```(?:json)?\s*", "", text.strip())
+    text = re.sub(r"\s*```$", "", text)
+    return text.strip()
+
 
 def get_anthropic() -> anthropic.Anthropic:
     global _anthropic
@@ -301,7 +355,7 @@ async def natural_language_search(payload: NLSearchQuery):
         }],
     )
 
-    raw = response.content[0].text.strip()
+    raw = _strip_code_fences(response.content[0].text)
     try:
         filters = json.loads(raw)
     except json.JSONDecodeError:
@@ -314,9 +368,13 @@ async def natural_language_search(payload: NLSearchQuery):
     if filters.get("industry"):
         conditions.append("industry_sector LIKE ?")
         params.append(f"%{filters['industry']}%")
-    if filters.get("state"):
-        conditions.append("state = ?")
-        params.append(str(filters["state"]).upper()[:2])
+
+    state_list = _normalize_states(filters.get("state"))
+    if state_list:
+        placeholders = ",".join("?" * len(state_list))
+        conditions.append(f"state IN ({placeholders})")
+        params.extend(state_list)
+
     if filters.get("min_score") is not None:
         try:
             conditions.append("acquisition_score >= ?")
@@ -334,6 +392,7 @@ async def natural_language_search(payload: NLSearchQuery):
     # min_years omitted — date_of_inc is not populated in this dataset
 
     where = " AND ".join(conditions)
+    print(f"[NL search] filters={filters}  states={_normalize_states(filters.get('state'))}  SQL={where}  params={params}")
 
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
