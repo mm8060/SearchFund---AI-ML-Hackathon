@@ -147,7 +147,18 @@ input[type=range]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;bac
 /* AI Card */
 .ai-header{font-size:15px;font-weight:700;color:#111;margin-bottom:3px}
 .ai-sub{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#00897b;margin-bottom:14px}
-.ai-box{background:#f3f0fa;border-radius:6px;padding:16px;font-size:13.5px;color:#3e3e5c;line-height:1.75;font-style:italic}
+.ai-sections{display:flex;flex-direction:column;gap:10px}
+.ai-section{padding:10px 14px;border-radius:0 6px 6px 0;background:#fafafa}
+.ai-section-signal{border-left:3px solid #4caf50}
+.ai-section-risk{border-left:3px solid #e65100}
+.ai-section-question{border-left:3px solid #42a5f5}
+.ai-section-default{border-left:3px solid #9ca3af}
+.ai-section-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px}
+.ai-section-signal .ai-section-label{color:#2e7d32}
+.ai-section-risk    .ai-section-label{color:#bf360c}
+.ai-section-question .ai-section-label{color:#1565c0}
+.ai-section-default  .ai-section-label{color:#6b7280}
+.ai-section-body{font-size:13.5px;color:#3e3e5c;line-height:1.7}
 
 /* Right column */
 .rc-label{font-size:10px;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:.12em;margin-bottom:14px}
@@ -696,7 +707,7 @@ function renderDetail(c) {
 
   // AI summary — use cached value from DB or show generate button
   const aiSummaryHTML = c.ai_summary
-    ? `<div class="ai-box">${esc(c.ai_summary)}</div>`
+    ? formatAISummary(c.ai_summary)
     : `<div id="aiSummaryContainer">
         <button class="btn-gen-ai" id="btnGenAI" onclick="generateAISummary(${c.id})">
           ✦ Generate AI Summary
@@ -784,7 +795,7 @@ function renderDetail(c) {
       <!-- AI Summary -->
       <div class="d-card">
         <div class="ai-header">AI Summary</div>
-        <div class="ai-sub">Powered by GPT-3.5 · Search Fund Analyst</div>
+        <div class="ai-sub">Powered by Claude · Search Fund Analyst</div>
         ${aiSummaryHTML}
       </div>
     </div>
@@ -864,6 +875,57 @@ function saveNote(id) {
   setTimeout(()=>msg.style.display='none',2000);
 }
 
+// ── AI SUMMARY FORMATTER ──
+function formatAISummary(text) {
+  if (!text) return '';
+
+  // Split into lines, drop blank lines and any # heading lines
+  const lines = text.split('\n')
+    .map(l => l.trim())
+    .filter(l => l && !l.startsWith('#'));
+
+  const sections = [];
+  let current = null;
+
+  for (const line of lines) {
+    // Match **Label** or **Label:** possibly with trailing text on the same line
+    const m = line.match(/^\*\*(.+?)\*\*[:\s]*(.*)$/);
+    if (m) {
+      if (current) sections.push(current);
+      const label = m[1].replace(/:$/, '').trim();
+      const rest  = m[2].trim();
+      current = { label, bodyLines: rest ? [rest] : [] };
+    } else if (current) {
+      current.bodyLines.push(line);
+    } else {
+      // Plain text before any bold label
+      sections.push({ label: null, bodyLines: [line] });
+    }
+  }
+  if (current) sections.push(current);
+
+  // Fallback: no structure detected — just show as plain text
+  if (sections.every(s => !s.label)) {
+    return `<div class="ai-section ai-section-default">
+      <div class="ai-section-body">${esc(lines.join(' '))}</div>
+    </div>`;
+  }
+
+  return '<div class="ai-sections">' + sections.map(s => {
+    const body = s.bodyLines.join(' ').trim();
+    if (!s.label) return '';   // skip unlabelled preamble lines
+    const lower = s.label.toLowerCase();
+    const cls = lower.includes('signal') || lower.includes('strength') ? 'ai-section-signal'
+              : lower.includes('risk')                                  ? 'ai-section-risk'
+              : lower.includes('question')                              ? 'ai-section-question'
+              : 'ai-section-default';
+    return `<div class="ai-section ${cls}">
+      <div class="ai-section-label">${esc(s.label)}</div>
+      <div class="ai-section-body">${esc(body)}</div>
+    </div>`;
+  }).join('') + '</div>';
+}
+
 // ── AI SUMMARY ──
 async function generateAISummary(id) {
   const container = document.getElementById('aiSummaryContainer');
@@ -876,7 +938,7 @@ async function generateAISummary(id) {
       if (!r.ok) return r.json().then(e => { throw new Error(e.detail || 'API error'); });
       return r.json();
     });
-    container.innerHTML = `<div class="ai-box">${esc(data.summary)}</div>`;
+    container.outerHTML = formatAISummary(data.summary);
     // Update cached value so re-opening the detail doesn't show the button again
     const company = allCompanies.find(c => c.id === id);
     if (company) company.ai_summary = data.summary;

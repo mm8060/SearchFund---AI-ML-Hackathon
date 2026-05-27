@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 import re
@@ -5,27 +6,27 @@ from contextlib import asynccontextmanager
 from datetime import date, datetime
 from typing import Optional
 
+import anthropic
 import aiosqlite
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from openai import AsyncOpenAI
 from pydantic import BaseModel
 
 load_dotenv()
 
 DB_PATH = "companies.db"
-_openai: Optional[AsyncOpenAI] = None
+_anthropic: Optional[anthropic.Anthropic] = None
 
 
-def get_openai() -> AsyncOpenAI:
-    global _openai
-    if _openai is None:
-        api_key = os.getenv("OPENAI_API_KEY")
+def get_anthropic() -> anthropic.Anthropic:
+    global _anthropic
+    if _anthropic is None:
+        api_key = os.getenv("ANTHROPIC_API_KEY")
         if not api_key or api_key == "your_key_here":
-            raise HTTPException(status_code=503, detail="OPENAI_API_KEY not configured in .env")
-        _openai = AsyncOpenAI(api_key=api_key)
-    return _openai
+            raise HTTPException(status_code=503, detail="ANTHROPIC_API_KEY not configured in .env")
+        _anthropic = anthropic.Anthropic(api_key=api_key)
+    return _anthropic
 
 
 @asynccontextmanager
@@ -193,21 +194,16 @@ async def get_company_summary(company_id: int):
         "the buyer should investigate."
     )
 
-    client = get_openai()
-    response = await client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {
-                "role": "system",
-                "content": "You are a senior analyst at a search fund. Write concise, professional acquisition assessments.",
-            },
-            {"role": "user", "content": user_prompt},
-        ],
-        max_tokens=220,
-        temperature=0.7,
+    client = get_anthropic()
+    response = await asyncio.to_thread(
+        client.messages.create,
+        model="claude-haiku-4-5-20251001",
+        max_tokens=300,
+        system="You are a senior analyst at a search fund. Write concise, professional acquisition assessments.",
+        messages=[{"role": "user", "content": user_prompt}],
     )
 
-    summary = response.choices[0].message.content.strip()
+    summary = response.content[0].text.strip()
 
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute(
@@ -287,30 +283,25 @@ async def natural_language_search(payload: NLSearchQuery):
     if not payload.query.strip():
         raise HTTPException(status_code=400, detail="Query cannot be empty")
 
-    client = get_openai()
-    response = await client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {
-                "role": "system",
-                "content": "You are a search fund acquisition filter parser. Return only valid JSON, no explanation.",
-            },
-            {
-                "role": "user",
-                "content": (
-                    "Convert this search fund acquisition search query into filter parameters. "
-                    "Return only valid JSON with these optional fields: "
-                    "industry (string), state (string, 2-letter code), "
-                    "min_score (integer 0-100), max_employees (integer), min_years (integer).\n"
-                    f"Query: {payload.query}"
-                ),
-            },
-        ],
+    client = get_anthropic()
+    response = await asyncio.to_thread(
+        client.messages.create,
+        model="claude-haiku-4-5-20251001",
         max_tokens=150,
-        temperature=0,
+        system="You are a search fund acquisition filter parser. Return only valid JSON, no explanation.",
+        messages=[{
+            "role": "user",
+            "content": (
+                "Convert this search fund acquisition search query into filter parameters. "
+                "Return only valid JSON with these optional fields: "
+                "industry (string), state (string, 2-letter code), "
+                "min_score (integer 0-100), max_employees (integer), min_years (integer).\n"
+                f"Query: {payload.query}"
+            ),
+        }],
     )
 
-    raw = response.choices[0].message.content.strip()
+    raw = response.content[0].text.strip()
     try:
         filters = json.loads(raw)
     except json.JSONDecodeError:
