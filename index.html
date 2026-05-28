@@ -291,13 +291,6 @@ input[type=range]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;bac
 .btn-copy{padding:8px 12px;border-radius:6px;border:1px solid #e5e7eb;background:#fff;cursor:pointer}
 .btn-send{padding:8px 12px;border-radius:6px;border:none;background:#2e7d32;color:#fff;cursor:pointer}
 
-/* Industry intelligence panel (slide-out) */
-.industry-panel-backdrop{position:fixed;right:0;top:60px;bottom:0;width:640px;max-width:100%;background:#fff;box-shadow:-12px 0 30px rgba(0,0,0,0.12);transform:translateX(100%);transition:transform .28s ease;z-index:1250;overflow:auto;padding:22px}
-.industry-panel-backdrop.show{transform:translateX(0)}
-.industry-panel-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-.industry-chip-row{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 18px}
-.industry-chip{padding:6px 10px;border-radius:18px;background:#e8f5e9;color:#2e7d32;cursor:pointer;border:1px solid #dff0e6;font-weight:600;font-size:13px}
-.industry-chip:hover{background:#c8e6c9}
 
 /* ── OUTREACH DRAFT MODAL (detail page) ── */
 .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;z-index:300;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
@@ -318,7 +311,6 @@ input[type=range]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;bac
 .winds-icon-green{color:#2e7d32}
 .winds-icon-red{color:#dc2626}
 </style>
-<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 <body>
 
@@ -412,12 +404,6 @@ input[type=range]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;bac
       <input class="nl-input" type="text" id="nlInput" placeholder="Describe what you're looking for… e.g. HVAC companies in Texas with high scores" onkeydown="if(event.key==='Enter')runNLSearch()">
       <button class="btn-nl" id="nlBtn" onclick="runNLSearch()">✦ AI Search</button>
     </div>
-        <div class="industry-chip-row" id="industryChips">
-          <div class="industry-chip" onclick="openIndustryPanel('238220','HVAC & Plumbing')">HVAC (NAICS 238220)</div>
-          <div class="industry-chip" onclick="openIndustryPanel('236','Construction')">Construction (NAICS 236)</div>
-          <div class="industry-chip" onclick="openIndustryPanel('561710','Pest Control')">Pest Control (NAICS 561710)</div>
-          <div class="industry-chip" onclick="openIndustryPanel('32','Manufacturing')">Manufacturing (NAICS 31-33)</div>
-        </div>
     <div class="nl-banner" id="nlBanner" style="display:none">
       <span>Showing AI results for: <strong id="nlBannerText"></strong></span>
       <button class="btn-nl-clear" onclick="clearNLSearch()">✕ Clear</button>
@@ -501,16 +487,6 @@ input[type=range]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;bac
   </div>
 </div>
 
-<!-- INDUSTRY INTELLIGENCE PANEL (global slide-out) -->
-<div id="industryPanel" class="industry-panel-backdrop" aria-hidden="true">
-  <div class="industry-panel-header">
-    <div>
-      <div style="font-weight:800;font-size:16px" id="industryPanelTitle">Industry Intelligence</div>
-      <div style="font-size:12px;color:#6b7280" id="industryPanelSubtitle">Overview</div>
-    </div>
-    <button class="modal-close" onclick="closeIndustryPanel()">✕</button>
-  </div>
-</div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script>
@@ -629,22 +605,6 @@ const INDUSTRY_METRICS = {
   }
 };
 
-function getIndustryKey(naics,label){
-  if (naics){
-    const s=String(naics);
-    if (NAICS_EXACT[s]) return NAICS_EXACT[s];
-    if (/^2382/.test(s)) return 'hvac';
-    if (/^(236|237|238)/.test(s)) return 'construction';
-    if (/^(31|32|33)/.test(s)) return 'manufacturing';
-    if (/^56171/.test(s)) return 'pestcontrol';
-    if (/^56173/.test(s)) return 'landscaping';
-    if (/^811/.test(s)) return 'auto';
-  }
-  if (label){
-    for (const [k,v] of Object.entries(IND_LABELS)) if (v===label) return k;
-  }
-  return null;
-}
 
 function getIndustryType(c) {
   const n = String(c.naics_code||'').trim();
@@ -795,179 +755,6 @@ function esc(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// ── INDUSTRY PANEL HELPERS ──
-function openIndustryPanel(naics, label){
-  const title = document.getElementById('industryPanelTitle');
-  const subtitle = document.getElementById('industryPanelSubtitle');
-  title.textContent = label || 'Industry Intelligence';
-  subtitle.textContent = naics?('NAICS ' + naics):'';
-
-  // find matching companies (prefix match for 2-3 digit NAICS)
-  const pool = allCompanies.filter(c=>{
-    const n = String(c.naics_code||'');
-    if (!n) return false;
-    if (naics.length<=3) return n.startsWith(naics);
-    return n===naics;
-  });
-
-  // prefer static precomputed metrics when available
-  const indKey = getIndustryKey(naics,label);
-  const metrics = indKey? INDUSTRY_METRICS[indKey] : null;
-  if (metrics){
-    renderFragmentationFromMetrics(metrics,label);
-    renderPerformanceBandFromMetrics(metrics,label);
-    populateMacroChecklist(naics,label,metrics);
-  } else {
-    renderFragmentation(pool, label);
-    renderPerformanceBand(pool, label);
-    populateMacroChecklist(naics, label);
-  }
-
-  document.getElementById('industryPanel').classList.add('show');
-}
-
-function closeIndustryPanel(){ document.getElementById('industryPanel').classList.remove('show'); }
-
-function renderFragmentation(pool, label){
-  const el = document.getElementById('fragmentationChart');
-  if (!el) return;
-  if (!pool || pool.length===0){ el.innerHTML = '<div style="color:#6b7280">No data for this industry in the dataset.</div>'; return; }
-  const vals = pool.map(c=>Number(c.award_amount||0));
-  const total = vals.reduce((a,b)=>a+b,0) || 0;
-  const sorted = pool.slice().sort((a,b)=> (Number(b.award_amount||0)) - (Number(a.award_amount||0)));
-  const top4 = sorted.slice(0,4).reduce((a,c)=>a+Number(c.award_amount||0),0);
-  const top4Pct = total? Math.round(top4/total*100):0;
-
-  // HHI (Herfindahl) as fragmentation inverse
-  const shares = pool.map(c=> total? (Number(c.award_amount||0)/total):0);
-  const hhi = Math.round(shares.reduce((a,s)=>a + (s*s),0)*10000); // 0-10000
-  const fragmentationIndex = Math.round(100 - Math.min(100, hhi/100));
-
-  const x = top4Pct; const y = fragmentationIndex;
-
-  const data = [{ x:[x], y:[y], mode:'markers+text', text:[label||''], textposition:'top center', marker:{size:18,color:'#2e7d32'} }];
-  const layout = {
-    xaxis:{title:'Top 4 Market Share (%)',range:[0,100],zeroline:false},
-    yaxis:{title:'Fragmentation Index (higher = more fragmented)',range:[0,100],zeroline:false,automargin:true,titlefont:{size:12},standoff:12,side:'left'},
-    shapes:[
-      {type:'line',x0:50,x1:50,y0:0,y1:100,line:{dash:'dash',color:'#e5e7eb'}},
-      {type:'line',x0:0,x1:100,y0:50,y1:50,line:{dash:'dash',color:'#e5e7eb'}}
-    ],
-    annotations:[{x:x,y:y,ax:20,ay:-20,text:`Top4: ${top4Pct}% · HHI:${hhi}`,showarrow:false,font:{size:12}}],
-    margin:{t:10,l:100,r:10,b:40}
-  };
-  Plotly.newPlot(el, data, layout, {responsive:true});
-}
-
-function renderPerformanceBand(pool, label){
-  const el = document.getElementById('performanceChart');
-  if (!el) return;
-  if (!pool || pool.length===0){ el.innerHTML = '<div style="color:#6b7280">No performance series available.</div>'; return; }
-  const currentYear = new Date().getFullYear();
-  const years = []; for (let i=7;i>=0;i--) years.push(String(currentYear - i));
-
-  // compute avg and stdev of award amounts
-  const vals = pool.map(c=>Number(c.award_amount||0)).filter(v=>v>0);
-  const avg = vals.length? (vals.reduce((a,b)=>a+b,0)/vals.length):0;
-  const sd = vals.length? Math.sqrt(vals.map(v=>Math.pow(v-avg,2)).reduce((a,b)=>a+b,0)/vals.length):0;
-  const vol = avg? Math.min(0.5, sd/avg):0.15;
-
-  const meanSeries = years.map((y,i)=> Math.round(avg * (1 + ((i-3.5)/14)*0.06)) );
-  const upper = meanSeries.map(v=> Math.round(v*(1+vol)) );
-  const lower = meanSeries.map(v=> Math.round(v*(1-vol)) );
-
-  const traceUpper = { x: years, y: upper, mode:'lines', line:{color:'rgba(0,0,0,0)'}, name:'upper' };
-  const traceLower = { x: years, y: lower, mode:'lines', fill:'tonexty', fillcolor:'rgba(46,125,50,0.12)', line:{color:'rgba(0,0,0,0)'}, name:'lower' };
-  const traceMean  = { x: years, y: meanSeries, mode:'lines+markers', line:{color:'#2e7d32'}, name:'mean' };
-  // compute y axis min/max with padding for clearer band visualization
-  const minY = Math.min(...lower);
-  const maxY = Math.max(...upper);
-  const padLow = Math.max(1, Math.round((maxY-minY)*0.08));
-  const padHigh = padLow;
-  const layout = {
-    margin:{t:10,l:100,r:10,b:40},
-    yaxis:{
-      title:'Average award / revenue (proxy)',
-      tickformat:',d',
-      range:[Math.max(0, Math.round(minY - padLow)), Math.round(maxY + padHigh)],
-      autorange:false,
-      side:'left',
-      automargin:true,
-      titlefont:{size:12},
-      standoff:12
-    }
-  };
-  Plotly.newPlot(el, [traceUpper, traceLower, traceMean], layout, {responsive:true});
-}
-
-// Renderers that use precomputed metrics
-function renderFragmentationFromMetrics(metrics,label){
-  const el = document.getElementById('fragmentationChart');
-  if (!el) return;
-  if (!metrics){ el.innerHTML = '<div style="color:#6b7280">No data for this industry.</div>'; return; }
-  const x = metrics.top4Pct || 0;
-  const hhi = metrics.hhi || 0;
-  const fragmentationIndex = Math.round(100 - Math.min(100, hhi/100));
-  const y = fragmentationIndex;
-  const data = [{ x:[x], y:[y], mode:'markers+text', text:[label||''], textposition:'top center', marker:{size:18,color:'#2e7d32'} }];
-  const layout = {
-    xaxis:{title:'Top 4 Market Share (%)',range:[0,100],zeroline:false},
-    yaxis:{title:'Fragmentation Index (higher = more fragmented)',range:[0,100],zeroline:false,automargin:true,titlefont:{size:12},standoff:12,side:'left'},
-    margin:{t:10,l:100,r:10,b:40}
-  };
-  Plotly.newPlot(el, data, layout, {responsive:true});
-}
-
-function renderPerformanceBandFromMetrics(metrics,label){
-  const el = document.getElementById('performanceChart');
-  if (!el) return;
-  if (!metrics || !metrics.performance){ el.innerHTML = '<div style="color:#6b7280">No performance series available.</div>'; return; }
-  const years = metrics.performance.years;
-  const meanSeries = metrics.performance.mean;
-  const upper = metrics.performance.upper;
-  const lower = metrics.performance.lower;
-  const traceUpper = { x: years, y: upper, mode:'lines', line:{color:'rgba(0,0,0,0)'}, name:'upper' };
-  const traceLower = { x: years, y: lower, mode:'lines', fill:'tonexty', fillcolor:'rgba(46,125,50,0.12)', line:{color:'rgba(0,0,0,0)'}, name:'lower' };
-  const traceMean  = { x: years, y: meanSeries, mode:'lines+markers', line:{color:'#2e7d32'}, name:'mean' };
-  const minY = Math.min(...lower);
-  const maxY = Math.max(...upper);
-  const padLow = Math.max(1, Math.round((maxY-minY)*0.08));
-  const padHigh = padLow;
-  const layout = {
-    margin:{t:10,l:100,r:10,b:40},
-    yaxis:{
-      title:'Average award / revenue (proxy)',
-      tickformat:',d',
-      range:[Math.max(0, Math.round(minY - padLow)), Math.round(maxY + padHigh)],
-      autorange:false,
-      side:'left',
-      automargin:true,
-      titlefont:{size:12},
-      standoff:12
-    }
-  };
-  Plotly.newPlot(el, [traceUpper, traceLower, traceMean], layout, {responsive:true});
-}
-
-function populateMacroChecklist(naics,label,metrics){
-  const el = document.getElementById('macroChecklist');
-  if (!el) return;
-  let pick = null;
-  if (metrics && metrics.macros){ pick = { tail: metrics.macros.tail || [], head: metrics.macros.head || [] }; }
-  else {
-    const MAP = {
-      '238220':{ tail:['Non-discretionary emergency service demand','High recurring maintenance contract potential'], head:['Local technician labor shortages','Municipal regulatory complexity'] },
-      '561710':{ tail:['Recurring pest control contracts','Essential services demand'], head:['Seasonality','Localized pricing pressure'] },
-      '236':{ tail:['Infrastructure spending cycles','Commercial construction demand'], head:['Cyclical capex','Permitting delays'] },
-      '32':{ tail:['Manufacturing automation tailwinds','outsourcing consolidation'], head:['Capital intensity','supply-chain risk'] }
-    };
-    pick = MAP[naics] || { tail:['Stable demand drivers'], head:['Competitive intensity'] };
-  }
-  el.innerHTML = '';
-  el.innerHTML += '<li><strong>Tailwinds:</strong></li>' + (pick.tail||[]).map(t=>`<li style="margin-left:8px">${t}</li>`).join('');
-  el.innerHTML += '<li style="margin-top:8px"><strong>Headwinds:</strong></li>' + (pick.head||[]).map(t=>`<li style="margin-left:8px">${t}</li>`).join('');
-}
-
 // ── FETCH ALL COMPANIES ──
 async function fetchAll() {
   try {
@@ -1085,8 +872,7 @@ function renderCard(c) {
   if (itype==='hvac'||itype==='pestcontrol') tags.push(['Top SF target','tag-teal']);
   if (c.cluster_label) tags.push([c.cluster_label, clusterTagClass(c.cluster_label)]);
 
-  // build tags HTML with clickable industry chip
-  const industryChip = `<span class="tag tag-teal" data-industry-label="${esc(industry)}" onclick="openIndustryPanel('${c.naics_code||''}', this.dataset.industryLabel)">${esc(industry)}</span>`;
+  const industryChip = `<span class="tag tag-teal">${esc(industry)}</span>`;
   const otherTagsHtml = tags.map(([l,cls])=>`<span class="tag ${cls}">${esc(l)}</span>`).join('');
   const tagsHtml = `<div class="card-tags">${industryChip}${otherTagsHtml}</div>`;
 
@@ -1314,7 +1100,9 @@ function renderDetail(c) {
       <!-- Industry Fragmentation Matrix -->
       <div class="d-card">
         <div class="section-label">Industry Fragmentation Matrix</div>
-        <div id="detFragChart" style="width:100%;height:280px"></div>
+        <div style="position:relative;width:100%;height:280px">
+          <canvas id="detFragChart"></canvas>
+        </div>
       </div>
 
       <!-- Macro Economic Drivers -->
@@ -1326,7 +1114,9 @@ function renderDetail(c) {
       <!-- Multi-Year Performance Band -->
       <div class="d-card">
         <div class="section-label">Multi-Year Performance Band</div>
-        <div id="detPerfChart" style="width:100%;height:260px"></div>
+        <div style="position:relative;width:100%;height:260px">
+          <canvas id="detPerfChart"></canvas>
+        </div>
       </div>
 
       <!-- Tailwinds / Headwinds -->
@@ -1931,9 +1721,11 @@ function copyOutreach() {
     .catch(() => showToast('Copy failed'));
 }
 
-// ── FRAGMENTATION MATRIX + REVENUE BAND + TAILWINDS ──
+// ── DETAIL PAGE CHARTS ──
 
-let revChartInstance = null;
+let revChartInstance  = null;
+let detFragChartInstance = null;
+let detPerfChartInstance = null;
 
 const FRAG_DATA = {
   hvac:         {x: 2, y: 9, label: 'HVAC'},
@@ -2082,65 +1874,99 @@ function renderDetailCharts(c) {
     });
   }
 
-  // ── Plotly industry charts (inline on detail page) ──
+  // ── Inline industry charts (Chart.js) ──
   renderDetailFragmentationChart(itype);
   renderDetailMacroDrivers(itype);
   renderDetailPerformanceBand(itype);
 }
 
 function renderDetailFragmentationChart(itype) {
-  const el = document.getElementById('detFragChart');
-  if (!el) return;
-  const current = INDUSTRY_METRICS[itype];
-  if (!current) {
-    el.innerHTML = '<div style="color:#6b7280;font-size:13px;padding:12px 0">No fragmentation data available for this industry.</div>';
-    return;
-  }
-  const currentLabel = IND_LABELS[itype] || 'This Industry';
-  const currentX = current.top4Pct;
-  const currentY = Math.round(100 - Math.min(100, current.hhi / 100));
+  const canvas = document.getElementById('detFragChart');
+  if (!canvas) return;
+  if (detFragChartInstance) { detFragChartInstance.destroy(); detFragChartInstance = null; }
 
-  const others = Object.entries(INDUSTRY_METRICS)
+  const currentPt = FRAG_DATA[itype] || { x: 5, y: 5, label: IND_LABELS[itype] || 'This Industry' };
+  const otherPts  = Object.entries(FRAG_DATA)
     .filter(([k]) => k !== itype)
-    .map(([k, m]) => ({ x: m.top4Pct, y: Math.round(100 - Math.min(100, m.hhi / 100)), label: IND_LABELS[k] || k }));
+    .map(([, v]) => ({ x: v.x, y: v.y, label: v.label }));
 
-  const traceOthers = {
-    x: others.map(p => p.x), y: others.map(p => p.y),
-    text: others.map(p => p.label),
-    mode: 'markers+text', textposition: 'top center',
-    textfont: { size: 10, color: '#9ca3af' },
-    marker: { size: 10, color: '#d1d5db' },
-    hovertemplate: '%{text}<br>Top 4: %{x}%<br>Frag Index: %{y}<extra></extra>',
-    name: 'Other industries',
+  const quadrantPlugin = {
+    id: 'quadrants',
+    afterDraw(chart) {
+      const { ctx, chartArea: { left, right, top, bottom, width, height } } = chart;
+      const midX = left + width / 2, midY = top + height / 2;
+      ctx.save();
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = 'rgba(209,213,219,0.9)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(midX, top);  ctx.lineTo(midX, bottom); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(left, midY); ctx.lineTo(right, midY);  ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font = '10px system-ui,-apple-system,sans-serif';
+      ctx.fillStyle = 'rgba(107,114,128,0.75)';
+      ctx.textAlign = 'center';
+      ctx.fillText('Fragmented & Active',   left + width * 0.25, top + 14);
+      ctx.fillText('Consolidated & Active', left + width * 0.75, top + 14);
+      ctx.fillText('Fragmented & Quiet',    left + width * 0.25, bottom - 6);
+      ctx.fillText('Consolidated & Quiet',  left + width * 0.75, bottom - 6);
+      ctx.restore();
+    },
   };
-  const traceCurrent = {
-    x: [currentX], y: [currentY],
-    text: [currentLabel],
-    mode: 'markers+text', textposition: 'top center',
-    textfont: { size: 11, color: '#2e7d32' },
-    marker: { size: 16, color: '#2e7d32' },
-    hovertemplate: currentLabel + '<br>Top 4: %{x}%<br>Frag Index: %{y}<extra></extra>',
-    name: currentLabel,
-  };
-  const layout = {
-    xaxis: { title: 'Top 4 Market Share (%)', range: [0, 100], zeroline: false, gridcolor: '#f3f4f6' },
-    yaxis: { title: 'Fragmentation Index', range: [0, 100], zeroline: false, automargin: true, titlefont: { size: 11 }, standoff: 8, gridcolor: '#f3f4f6' },
-    shapes: [
-      { type: 'line', x0: 50, x1: 50, y0: 0, y1: 100, line: { dash: 'dash', color: '#e5e7eb', width: 1 } },
-      { type: 'line', x0: 0, x1: 100, y0: 50, y1: 50, line: { dash: 'dash', color: '#e5e7eb', width: 1 } },
-    ],
-    annotations: [
-      { x: 25, y: 97, text: 'Fragmented / Active',    showarrow: false, font: { size: 9, color: '#9ca3af' } },
-      { x: 75, y: 97, text: 'Consolidated / Active',  showarrow: false, font: { size: 9, color: '#9ca3af' } },
-      { x: 25, y: 3,  text: 'Fragmented / Quiet',     showarrow: false, font: { size: 9, color: '#9ca3af' } },
-      { x: 75, y: 3,  text: 'Consolidated / Quiet',   showarrow: false, font: { size: 9, color: '#9ca3af' } },
-    ],
-    margin: { t: 20, l: 70, r: 20, b: 50 },
-    showlegend: false,
-    plot_bgcolor: '#fafafa',
-    paper_bgcolor: '#ffffff',
-  };
-  Plotly.newPlot(el, [traceOthers, traceCurrent], layout, { responsive: true, displayModeBar: false });
+
+  detFragChartInstance = new Chart(canvas, {
+    type: 'scatter',
+    data: {
+      datasets: [
+        {
+          label: 'Other industries',
+          data: otherPts,
+          backgroundColor: 'rgba(209,213,219,0.75)',
+          pointRadius: 7,
+          pointHoverRadius: 9,
+        },
+        {
+          label: currentPt.label,
+          data: [{ x: currentPt.x, y: currentPt.y }],
+          backgroundColor: '#2e7d32',
+          pointRadius: 11,
+          pointHoverRadius: 13,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label(ctx) {
+              const r = ctx.raw;
+              const lbl = r.label || ctx.dataset.label || '';
+              return `${lbl}: concentration ${r.x}/10, activity ${r.y}/10`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          min: 0, max: 10,
+          title: { display: true, text: 'Market Concentration →', font: { size: 11 }, color: '#6b7280' },
+          ticks: { display: false },
+          grid: { display: false },
+          border: { display: true, color: '#e5e7eb' },
+        },
+        y: {
+          min: 0, max: 10,
+          title: { display: true, text: '↑ Acquisition Activity', font: { size: 11 }, color: '#6b7280' },
+          ticks: { display: false },
+          grid: { display: false },
+          border: { display: true, color: '#e5e7eb' },
+        },
+      },
+    },
+    plugins: [quadrantPlugin],
+  });
 }
 
 function renderDetailMacroDrivers(itype) {
@@ -2163,31 +1989,81 @@ function renderDetailMacroDrivers(itype) {
 }
 
 function renderDetailPerformanceBand(itype) {
-  const el = document.getElementById('detPerfChart');
-  if (!el) return;
+  const canvas = document.getElementById('detPerfChart');
+  if (!canvas) return;
+  if (detPerfChartInstance) { detPerfChartInstance.destroy(); detPerfChartInstance = null; }
+
   const metrics = INDUSTRY_METRICS[itype];
-  if (!metrics || !metrics.performance) {
-    el.innerHTML = '<div style="color:#6b7280;font-size:13px;padding:12px 0">No performance data available for this industry.</div>';
-    return;
-  }
+  if (!metrics || !metrics.performance) return;
   const { years, mean: meanSeries, upper, lower } = metrics.performance;
-  const traceUpper = { x: years, y: upper, mode: 'lines', line: { color: 'rgba(0,0,0,0)' }, name: 'upper' };
-  const traceLower = { x: years, y: lower, mode: 'lines', fill: 'tonexty', fillcolor: 'rgba(46,125,50,0.12)', line: { color: 'rgba(0,0,0,0)' }, name: 'lower' };
-  const traceMean  = { x: years, y: meanSeries, mode: 'lines+markers', line: { color: '#2e7d32', width: 2 }, marker: { size: 5, color: '#2e7d32' }, name: 'Avg Revenue' };
-  const minY = Math.min(...lower), maxY = Math.max(...upper);
-  const pad = Math.max(1, Math.round((maxY - minY) * 0.08));
-  const layout = {
-    margin: { t: 10, l: 90, r: 10, b: 40 },
-    yaxis: {
-      title: 'Avg award / revenue (proxy)', tickformat: ',d',
-      range: [Math.max(0, minY - pad), maxY + pad], autorange: false,
-      side: 'left', automargin: true, titlefont: { size: 11 }, standoff: 8,
+
+  detPerfChartInstance = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: years,
+      datasets: [
+        {
+          label: 'Upper band',
+          data: upper,
+          borderColor: 'rgba(76,175,80,0.35)',
+          backgroundColor: 'rgba(76,175,80,0.12)',
+          borderWidth: 1,
+          pointRadius: 0,
+          fill: '+1',
+          tension: 0.4,
+        },
+        {
+          label: 'Lower band',
+          data: lower,
+          borderColor: 'rgba(76,175,80,0.35)',
+          backgroundColor: 'transparent',
+          borderWidth: 1,
+          pointRadius: 0,
+          fill: false,
+          tension: 0.4,
+        },
+        {
+          label: 'Avg Revenue',
+          data: meanSeries,
+          borderColor: '#2e7d32',
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          pointRadius: 3,
+          pointBackgroundColor: '#2e7d32',
+          fill: false,
+          tension: 0.4,
+        },
+      ],
     },
-    plot_bgcolor: '#fafafa',
-    paper_bgcolor: '#ffffff',
-    showlegend: false,
-  };
-  Plotly.newPlot(el, [traceUpper, traceLower, traceMean], layout, { responsive: true, displayModeBar: false });
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label(ctx) { return `${ctx.dataset.label}: ${fmtMoney(ctx.raw)}`; },
+          },
+        },
+      },
+      scales: {
+        x: {
+          ticks: { font: { size: 10 }, color: '#9ca3af' },
+          grid: { display: false },
+          border: { display: false },
+        },
+        y: {
+          ticks: {
+            font: { size: 10 }, color: '#9ca3af',
+            callback(v) { return fmtMoney(v); },
+            maxTicksLimit: 4,
+          },
+          grid: { color: 'rgba(229,231,235,0.5)' },
+          border: { display: false },
+        },
+      },
+    },
+  });
 }
 
 // ── OUTREACH DRAFT MODAL ──
