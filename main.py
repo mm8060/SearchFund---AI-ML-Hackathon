@@ -11,6 +11,8 @@ import aiosqlite
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 load_dotenv()
@@ -185,6 +187,11 @@ class NLSearchQuery(BaseModel):
 
 
 # ---------- routes ----------
+
+@app.get("/")
+async def serve_index():
+    return FileResponse("index.html")
+
 
 @app.get("/companies")
 async def list_companies(

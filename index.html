@@ -490,7 +490,7 @@ input[type=range]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;bac
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script>
-const API = 'http://localhost:8000';
+const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
 let allCompanies = [];
 let filteredCompanies = [];
 let displayedCount = 0;
@@ -758,12 +758,12 @@ function esc(s) {
 // ── FETCH ALL COMPANIES ──
 async function fetchAll() {
   try {
-    const first = await fetch(`${API}/companies?page=1&page_size=200`).then(r=>r.json());
+    const first = await fetch(`${API_BASE}/companies?page=1&page_size=200`).then(r=>r.json());
     allCompanies = first.results||[];
     const pages = first.pages||1;
     if (pages>1) {
       const reqs = [];
-      for (let p=2;p<=pages;p++) reqs.push(fetch(`${API}/companies?page=${p}&page_size=200`).then(r=>r.json()));
+      for (let p=2;p<=pages;p++) reqs.push(fetch(`${API_BASE}/companies?page=${p}&page_size=200`).then(r=>r.json()));
       const rest = await Promise.all(reqs);
       rest.forEach(r=>{ allCompanies=allCompanies.concat(r.results||[]); });
     }
@@ -921,7 +921,7 @@ function toggleSave(id, btn) {
 async function addToPipeline(id, btn) {
   if (pipelineIds.has(id)) { showToast('Already in pipeline'); return; }
   try {
-    const r = await fetch(`${API}/pipeline`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({company_id:id,status:'prospect'}) });
+    const r = await fetch(`${API_BASE}/pipeline`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({company_id:id,status:'prospect'}) });
     if (!r.ok) throw new Error(await r.text());
     pipelineIds.add(id);
     localStorage.setItem('sf_pipeline', JSON.stringify([...pipelineIds]));
@@ -932,7 +932,7 @@ async function addToPipeline(id, btn) {
 
 // ── DETAIL PAGE ──
 async function showDetail(id) {
-  const company = await fetch(`${API}/companies/${id}`).then(r=>r.json());
+  const company = await fetch(`${API_BASE}/companies/${id}`).then(r=>r.json());
   renderDetail(company);
   document.getElementById('detailPage').classList.add('visible');
   document.getElementById('detailPage').scrollTop=0;
@@ -1289,7 +1289,7 @@ async function generateAISummary(btn, id) {
   try { if (btn) btn.disabled = true; } catch(e){}
   container.innerHTML = '<div class="ai-spinner"><div class="spinner" style="width:24px;height:24px;border-width:2px;margin:0"></div><span>Generating assessment…</span></div>';
   try {
-    const data = await fetch(`${API}/companies/${id}/summary`).then(r => {
+    const data = await fetch(`${API_BASE}/companies/${id}/summary`).then(r => {
       if (!r.ok) return r.json().then(e => { throw new Error(e.detail || 'API error'); });
       return r.json();
     });
@@ -1315,7 +1315,7 @@ async function runNLSearch() {
   document.getElementById('loadMoreBtn').style.display = 'none';
 
   try {
-    const data = await fetch(`${API}/search/natural`, {
+    const data = await fetch(`${API_BASE}/search/natural`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({query}),
@@ -1422,7 +1422,7 @@ async function loadPipelineView() {
   pipe.innerHTML = '<div class="loading-state"><div class="spinner"></div><p>Loading pipeline…</p></div>';
   activePipelineStage = null;
   try {
-    const data = await fetch(`${API}/pipeline`).then(r => r.json());
+    const data = await fetch(`${API_BASE}/pipeline`).then(r => r.json());
     pipelineEntries = data.results || [];
     renderPipelinePage();
   } catch(e) {
@@ -1511,7 +1511,7 @@ function renderKanbanCard(entry) {
 
 async function updatePipelineStage(companyId, newStage) {
   try {
-    await fetch(`${API}/pipeline/${companyId}`, {
+    await fetch(`${API_BASE}/pipeline/${companyId}`, {
       method:'PATCH', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({stage: newStage})
     });
@@ -1631,7 +1631,7 @@ async function savePipelineContact(companyId) {
     owner_linkedin: document.getElementById('pdOwnerLinkedIn').value || null,
   };
   try {
-    await fetch(`${API}/pipeline/${companyId}`, {
+    await fetch(`${API_BASE}/pipeline/${companyId}`, {
       method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(update)
     });
     const entry = pipelineEntries.find(e => e.company_id === companyId);
@@ -1644,7 +1644,7 @@ async function savePipelineContact(companyId) {
 async function savePipelineFollowUp(companyId) {
   const val = document.getElementById('pdFollowUpDate').value || null;
   try {
-    await fetch(`${API}/pipeline/${companyId}`, {
+    await fetch(`${API_BASE}/pipeline/${companyId}`, {
       method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({follow_up_date: val})
     });
     const entry = pipelineEntries.find(e => e.company_id === companyId);
@@ -1673,7 +1673,7 @@ function addPipelineNote(companyId) {
     `<div class="pd-note-entry">${n.ts?`<span class="pd-note-ts">${esc(n.ts)}</span>`:''} ${esc(n.text)}</div>`
   ).join('');
 
-  fetch(`${API}/pipeline/${companyId}`, {
+  fetch(`${API_BASE}/pipeline/${companyId}`, {
     method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({notes: updated})
   }).catch(() => showToast('Failed to save note'));
 }
@@ -1683,7 +1683,7 @@ async function generatePipelineOutreach(companyId) {
   btn.disabled = true;
   btn.innerHTML = '<span class="btn-nl-spinner"></span>Generating…';
   try {
-    const data = await fetch(`${API}/pipeline/${companyId}/outreach`).then(r => {
+    const data = await fetch(`${API_BASE}/pipeline/${companyId}/outreach`).then(r => {
       if (!r.ok) return r.json().then(e => { throw new Error(e.detail||'API error'); });
       return r.json();
     });
@@ -1705,7 +1705,7 @@ async function savePipelineOutreach(companyId) {
   const text = document.getElementById('pdOutreachArea').value;
   const entry = pipelineEntries.find(e => e.company_id === companyId);
   try {
-    await fetch(`${API}/pipeline/${companyId}`, {
+    await fetch(`${API_BASE}/pipeline/${companyId}`, {
       method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({outreach_message: text})
     });
     if (entry) entry.outreach_message = text;
@@ -2075,7 +2075,7 @@ async function openOutreachDraftModal(id) {
   body.innerHTML = '<div class="ai-spinner"><div class="spinner" style="width:24px;height:24px;border-width:2px;margin:0"></div><span>Generating outreach draft…</span></div>';
 
   try {
-    const data = await fetch(`${API}/pipeline/${id}/outreach`).then(r => {
+    const data = await fetch(`${API_BASE}/pipeline/${id}/outreach`).then(r => {
       if (!r.ok) return r.json().then(e => { throw new Error(e.detail || 'API error'); });
       return r.json();
     });
