@@ -1149,10 +1149,10 @@ async function addToPipeline(id, btn) {
 async function showDetail(id) {
   const company = await fetch(`${API}/companies/${id}`).then(r=>r.json());
   renderDetail(company);
-  renderDetailCharts(company);
   document.getElementById('detailPage').classList.add('visible');
   document.getElementById('detailPage').scrollTop=0;
   document.getElementById('bcName').textContent = company.company_name||'Company';
+  requestAnimationFrame(() => renderDetailCharts(company));
 }
 
 function closeDetail() {
@@ -1265,7 +1265,6 @@ function renderDetail(c) {
             <div class="dh-actions">
             <button class="btn-action${isSaved?' active':''}" id="detSaveBtn" onclick="detToggleSave(${c.id})">${isSaved?'♥ Saved':'♡ Save'}</button>
             <button class="btn-action" onclick="showToast('Share link copied!')">↗ Share</button>
-            <button class="btn-action" onclick="openOutreach(${c.id})">✉ Draft</button>
             <button class="btn-action-primary${inPipe?' active':''}" id="detPipeBtn" onclick="detAddPipeline(${c.id})">${inPipe?'✓ In Pipeline':'+ Add to Pipeline'}</button>
             <button class="btn-action" onclick="openOutreachDraftModal(${c.id})">✉ Outreach Draft</button>
           </div>
@@ -1313,17 +1312,10 @@ function renderDetail(c) {
         `).join('')}
       </div>
 
-      <!-- AI Summary -->
-      <div class="d-card">
-        <div class="ai-header">AI Summary</div>
-        <div class="ai-sub">Powered by Claude · Search Fund Analyst</div>
-        ${aiSummaryHTML}
-      </div>
-
       <!-- Fragmentation Matrix -->
       <div class="d-card">
         <div class="section-label">Industry Fragmentation</div>
-        <div style="position:relative;height:240px">
+        <div style="position:relative;width:100%;height:260px">
           <canvas id="fragChart"></canvas>
         </div>
       </div>
@@ -1331,7 +1323,25 @@ function renderDetail(c) {
       <!-- Tailwinds / Headwinds -->
       <div class="d-card">
         <div class="section-label">Tailwinds &amp; Headwinds</div>
-        ${renderTailwindsHTML(itype)}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div>
+            <div class="winds-col-label winds-col-label-green" style="margin-bottom:10px">Tailwinds</div>
+            ${(INDUSTRY_WINDS[itype]||DEFAULT_WINDS).tailwinds.map(t=>`
+              <div class="winds-row"><span class="winds-icon winds-icon-green">✓</span><span>${esc(t)}</span></div>`).join('')}
+          </div>
+          <div>
+            <div class="winds-col-label winds-col-label-red" style="margin-bottom:10px">Headwinds</div>
+            ${(INDUSTRY_WINDS[itype]||DEFAULT_WINDS).headwinds.map(h=>`
+              <div class="winds-row"><span class="winds-icon winds-icon-red">✕</span><span>${esc(h)}</span></div>`).join('')}
+          </div>
+        </div>
+      </div>
+
+      <!-- AI Summary -->
+      <div class="d-card">
+        <div class="ai-header">AI Summary</div>
+        <div class="ai-sub">Powered by Claude · Search Fund Analyst</div>
+        ${aiSummaryHTML}
       </div>
     </div>
 
