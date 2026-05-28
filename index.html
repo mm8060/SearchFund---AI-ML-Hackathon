@@ -510,12 +510,6 @@ input[type=range]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;bac
     </div>
     <button class="modal-close" onclick="closeIndustryPanel()">✕</button>
   </div>
-  <div style="font-size:13px;color:#374151;margin-bottom:10px">Fragmentation Matrix</div>
-  <div id="fragmentationChart" style="width:100%;height:320px;"></div>
-  <div style="font-size:13px;color:#374151;margin:12px 0 6px">Macro Economic Drivers</div>
-  <ul id="macroChecklist" style="margin:0 0 12px 18px;color:#374151"></ul>
-  <div style="font-size:13px;color:#374151;margin:12px 0 6px">Aggregated Multi-Year Performance Band</div>
-  <div id="performanceChart" style="width:100%;height:260px;"></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
@@ -836,6 +830,7 @@ function closeIndustryPanel(){ document.getElementById('industryPanel').classLis
 
 function renderFragmentation(pool, label){
   const el = document.getElementById('fragmentationChart');
+  if (!el) return;
   if (!pool || pool.length===0){ el.innerHTML = '<div style="color:#6b7280">No data for this industry in the dataset.</div>'; return; }
   const vals = pool.map(c=>Number(c.award_amount||0));
   const total = vals.reduce((a,b)=>a+b,0) || 0;
@@ -866,6 +861,7 @@ function renderFragmentation(pool, label){
 
 function renderPerformanceBand(pool, label){
   const el = document.getElementById('performanceChart');
+  if (!el) return;
   if (!pool || pool.length===0){ el.innerHTML = '<div style="color:#6b7280">No performance series available.</div>'; return; }
   const currentYear = new Date().getFullYear();
   const years = []; for (let i=7;i>=0;i--) years.push(String(currentYear - i));
@@ -907,6 +903,7 @@ function renderPerformanceBand(pool, label){
 // Renderers that use precomputed metrics
 function renderFragmentationFromMetrics(metrics,label){
   const el = document.getElementById('fragmentationChart');
+  if (!el) return;
   if (!metrics){ el.innerHTML = '<div style="color:#6b7280">No data for this industry.</div>'; return; }
   const x = metrics.top4Pct || 0;
   const hhi = metrics.hhi || 0;
@@ -923,6 +920,7 @@ function renderFragmentationFromMetrics(metrics,label){
 
 function renderPerformanceBandFromMetrics(metrics,label){
   const el = document.getElementById('performanceChart');
+  if (!el) return;
   if (!metrics || !metrics.performance){ el.innerHTML = '<div style="color:#6b7280">No performance series available.</div>'; return; }
   const years = metrics.performance.years;
   const meanSeries = metrics.performance.mean;
@@ -953,6 +951,7 @@ function renderPerformanceBandFromMetrics(metrics,label){
 
 function populateMacroChecklist(naics,label,metrics){
   const el = document.getElementById('macroChecklist');
+  if (!el) return;
   let pick = null;
   if (metrics && metrics.macros){ pick = { tail: metrics.macros.tail || [], head: metrics.macros.head || [] }; }
   else {
@@ -1312,12 +1311,22 @@ function renderDetail(c) {
         `).join('')}
       </div>
 
-      <!-- Fragmentation Matrix -->
+      <!-- Industry Fragmentation Matrix -->
       <div class="d-card">
-        <div class="section-label">Industry Fragmentation</div>
-        <div style="position:relative;width:100%;height:260px">
-          <canvas id="fragChart"></canvas>
-        </div>
+        <div class="section-label">Industry Fragmentation Matrix</div>
+        <div id="detFragChart" style="width:100%;height:280px"></div>
+      </div>
+
+      <!-- Macro Economic Drivers -->
+      <div class="d-card">
+        <div class="section-label">Macro Economic Drivers</div>
+        <div id="detMacroDrivers" style="margin-top:4px"></div>
+      </div>
+
+      <!-- Multi-Year Performance Band -->
+      <div class="d-card">
+        <div class="section-label">Multi-Year Performance Band</div>
+        <div id="detPerfChart" style="width:100%;height:260px"></div>
       </div>
 
       <!-- Tailwinds / Headwinds -->
@@ -1924,7 +1933,6 @@ function copyOutreach() {
 
 // ── FRAGMENTATION MATRIX + REVENUE BAND + TAILWINDS ──
 
-let fragChartInstance = null;
 let revChartInstance = null;
 
 const FRAG_DATA = {
@@ -1994,95 +2002,6 @@ function seededRand(seed, i) {
 function renderDetailCharts(c) {
   const itype = getIndustryType(c);
   const seed = c.id || 42;
-
-  // ── Fragmentation scatter ──
-  const fragCanvas = document.getElementById('fragChart');
-  if (fragCanvas) {
-    if (fragChartInstance) { fragChartInstance.destroy(); fragChartInstance = null; }
-
-    const currentPt = FRAG_DATA[itype] || {x: 5, y: 5, label: IND_LABELS[itype] || 'This Industry'};
-    const otherPts  = Object.entries(FRAG_DATA)
-      .filter(([k]) => k !== itype)
-      .map(([, v]) => ({x: v.x, y: v.y, label: v.label}));
-
-    const quadrantPlugin = {
-      id: 'quadrants',
-      afterDraw(chart) {
-        const {ctx, chartArea: {left, right, top, bottom, width, height}} = chart;
-        const midX = left + width / 2, midY = top + height / 2;
-        ctx.save();
-        ctx.setLineDash([4, 4]);
-        ctx.strokeStyle = 'rgba(209,213,219,0.9)';
-        ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(midX, top);   ctx.lineTo(midX, bottom); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(left, midY);  ctx.lineTo(right, midY);  ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.font = '10px system-ui, -apple-system, sans-serif';
-        ctx.fillStyle = 'rgba(107,114,128,0.75)';
-        ctx.textAlign = 'center';
-        ctx.fillText('Fragmented & Active',    left + width * 0.25, top + 14);
-        ctx.fillText('Consolidated & Active',  left + width * 0.75, top + 14);
-        ctx.fillText('Fragmented & Quiet',     left + width * 0.25, bottom - 6);
-        ctx.fillText('Consolidated & Quiet',   left + width * 0.75, bottom - 6);
-        ctx.restore();
-      },
-    };
-
-    fragChartInstance = new Chart(fragCanvas, {
-      type: 'scatter',
-      data: {
-        datasets: [
-          {
-            label: 'Other industries',
-            data: otherPts,
-            backgroundColor: 'rgba(209,213,219,0.75)',
-            pointRadius: 7,
-            pointHoverRadius: 9,
-          },
-          {
-            label: currentPt.label,
-            data: [{x: currentPt.x, y: currentPt.y}],
-            backgroundColor: '#2e7d32',
-            pointRadius: 11,
-            pointHoverRadius: 13,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {display: false},
-          tooltip: {
-            callbacks: {
-              label(ctx) {
-                const r = ctx.raw;
-                const lbl = r.label || ctx.dataset.label || '';
-                return `${lbl}: concentration ${r.x}/10, activity ${r.y}/10`;
-              },
-            },
-          },
-        },
-        scales: {
-          x: {
-            min: 0, max: 10,
-            title: {display: true, text: 'Market Concentration →', font: {size: 11}, color: '#6b7280'},
-            ticks: {display: false},
-            grid: {display: false},
-            border: {display: true, color: '#e5e7eb'},
-          },
-          y: {
-            min: 0, max: 10,
-            title: {display: true, text: '↑ Acquisition Activity', font: {size: 11}, color: '#6b7280'},
-            ticks: {display: false},
-            grid: {display: false},
-            border: {display: true, color: '#e5e7eb'},
-          },
-        },
-      },
-      plugins: [quadrantPlugin],
-    });
-  }
 
   // ── Revenue band chart ──
   const revCanvas = document.getElementById('revChart');
@@ -2162,6 +2081,113 @@ function renderDetailCharts(c) {
       },
     });
   }
+
+  // ── Plotly industry charts (inline on detail page) ──
+  renderDetailFragmentationChart(itype);
+  renderDetailMacroDrivers(itype);
+  renderDetailPerformanceBand(itype);
+}
+
+function renderDetailFragmentationChart(itype) {
+  const el = document.getElementById('detFragChart');
+  if (!el) return;
+  const current = INDUSTRY_METRICS[itype];
+  if (!current) {
+    el.innerHTML = '<div style="color:#6b7280;font-size:13px;padding:12px 0">No fragmentation data available for this industry.</div>';
+    return;
+  }
+  const currentLabel = IND_LABELS[itype] || 'This Industry';
+  const currentX = current.top4Pct;
+  const currentY = Math.round(100 - Math.min(100, current.hhi / 100));
+
+  const others = Object.entries(INDUSTRY_METRICS)
+    .filter(([k]) => k !== itype)
+    .map(([k, m]) => ({ x: m.top4Pct, y: Math.round(100 - Math.min(100, m.hhi / 100)), label: IND_LABELS[k] || k }));
+
+  const traceOthers = {
+    x: others.map(p => p.x), y: others.map(p => p.y),
+    text: others.map(p => p.label),
+    mode: 'markers+text', textposition: 'top center',
+    textfont: { size: 10, color: '#9ca3af' },
+    marker: { size: 10, color: '#d1d5db' },
+    hovertemplate: '%{text}<br>Top 4: %{x}%<br>Frag Index: %{y}<extra></extra>',
+    name: 'Other industries',
+  };
+  const traceCurrent = {
+    x: [currentX], y: [currentY],
+    text: [currentLabel],
+    mode: 'markers+text', textposition: 'top center',
+    textfont: { size: 11, color: '#2e7d32' },
+    marker: { size: 16, color: '#2e7d32' },
+    hovertemplate: currentLabel + '<br>Top 4: %{x}%<br>Frag Index: %{y}<extra></extra>',
+    name: currentLabel,
+  };
+  const layout = {
+    xaxis: { title: 'Top 4 Market Share (%)', range: [0, 100], zeroline: false, gridcolor: '#f3f4f6' },
+    yaxis: { title: 'Fragmentation Index', range: [0, 100], zeroline: false, automargin: true, titlefont: { size: 11 }, standoff: 8, gridcolor: '#f3f4f6' },
+    shapes: [
+      { type: 'line', x0: 50, x1: 50, y0: 0, y1: 100, line: { dash: 'dash', color: '#e5e7eb', width: 1 } },
+      { type: 'line', x0: 0, x1: 100, y0: 50, y1: 50, line: { dash: 'dash', color: '#e5e7eb', width: 1 } },
+    ],
+    annotations: [
+      { x: 25, y: 97, text: 'Fragmented / Active',    showarrow: false, font: { size: 9, color: '#9ca3af' } },
+      { x: 75, y: 97, text: 'Consolidated / Active',  showarrow: false, font: { size: 9, color: '#9ca3af' } },
+      { x: 25, y: 3,  text: 'Fragmented / Quiet',     showarrow: false, font: { size: 9, color: '#9ca3af' } },
+      { x: 75, y: 3,  text: 'Consolidated / Quiet',   showarrow: false, font: { size: 9, color: '#9ca3af' } },
+    ],
+    margin: { t: 20, l: 70, r: 20, b: 50 },
+    showlegend: false,
+    plot_bgcolor: '#fafafa',
+    paper_bgcolor: '#ffffff',
+  };
+  Plotly.newPlot(el, [traceOthers, traceCurrent], layout, { responsive: true, displayModeBar: false });
+}
+
+function renderDetailMacroDrivers(itype) {
+  const el = document.getElementById('detMacroDrivers');
+  if (!el) return;
+  const metrics = INDUSTRY_METRICS[itype];
+  const macros = metrics && metrics.macros ? metrics.macros : null;
+  const tailwinds = macros ? macros.tail : ['Stable demand drivers', 'Recurring revenue base'];
+  const headwinds = macros ? macros.head : ['Competitive intensity', 'Market uncertainty'];
+  el.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div>
+      <div class="winds-col-label winds-col-label-green" style="margin-bottom:10px">Tailwinds</div>
+      ${tailwinds.map(t => `<div class="winds-row"><span class="winds-icon winds-icon-green">✓</span><span>${esc(t)}</span></div>`).join('')}
+    </div>
+    <div>
+      <div class="winds-col-label winds-col-label-red" style="margin-bottom:10px">Headwinds</div>
+      ${headwinds.map(h => `<div class="winds-row"><span class="winds-icon winds-icon-red">✕</span><span>${esc(h)}</span></div>`).join('')}
+    </div>
+  </div>`;
+}
+
+function renderDetailPerformanceBand(itype) {
+  const el = document.getElementById('detPerfChart');
+  if (!el) return;
+  const metrics = INDUSTRY_METRICS[itype];
+  if (!metrics || !metrics.performance) {
+    el.innerHTML = '<div style="color:#6b7280;font-size:13px;padding:12px 0">No performance data available for this industry.</div>';
+    return;
+  }
+  const { years, mean: meanSeries, upper, lower } = metrics.performance;
+  const traceUpper = { x: years, y: upper, mode: 'lines', line: { color: 'rgba(0,0,0,0)' }, name: 'upper' };
+  const traceLower = { x: years, y: lower, mode: 'lines', fill: 'tonexty', fillcolor: 'rgba(46,125,50,0.12)', line: { color: 'rgba(0,0,0,0)' }, name: 'lower' };
+  const traceMean  = { x: years, y: meanSeries, mode: 'lines+markers', line: { color: '#2e7d32', width: 2 }, marker: { size: 5, color: '#2e7d32' }, name: 'Avg Revenue' };
+  const minY = Math.min(...lower), maxY = Math.max(...upper);
+  const pad = Math.max(1, Math.round((maxY - minY) * 0.08));
+  const layout = {
+    margin: { t: 10, l: 90, r: 10, b: 40 },
+    yaxis: {
+      title: 'Avg award / revenue (proxy)', tickformat: ',d',
+      range: [Math.max(0, minY - pad), maxY + pad], autorange: false,
+      side: 'left', automargin: true, titlefont: { size: 11 }, standoff: 8,
+    },
+    plot_bgcolor: '#fafafa',
+    paper_bgcolor: '#ffffff',
+    showlegend: false,
+  };
+  Plotly.newPlot(el, [traceUpper, traceLower, traceMean], layout, { responsive: true, displayModeBar: false });
 }
 
 // ── OUTREACH DRAFT MODAL ──
