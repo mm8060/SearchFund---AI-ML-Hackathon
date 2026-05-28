@@ -207,6 +207,76 @@ input[type=range]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;bac
 /* Toast */
 .toast{position:fixed;bottom:24px;right:24px;z-index:9999;background:#1a1a2e;color:#fff;padding:12px 20px;border-radius:8px;font-size:14px;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;max-width:300px}
 .toast.show{opacity:1;transform:translateY(0)}
+
+/* ── PIPELINE KANBAN ── */
+.pipeline-summary{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;align-items:center;padding:0 2px}
+.pipeline-summary-label{font-size:12px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em;margin-right:4px}
+.stage-pill{padding:5px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:2px solid transparent;transition:all .15s;user-select:none}
+.stage-pill:hover{opacity:.85}
+.stage-pill.spill-active{border-color:#111!important}
+.kanban-board{display:flex;gap:12px;overflow-x:auto;padding-bottom:20px;min-height:55vh;align-items:flex-start}
+.kanban-board::-webkit-scrollbar{height:6px}
+.kanban-board::-webkit-scrollbar-track{background:#f3f4f6;border-radius:3px}
+.kanban-board::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:3px}
+.kanban-col{flex:0 0 230px;min-width:230px;background:#f8f9fa;border-radius:10px;border:1px solid #e5e7eb;display:flex;flex-direction:column;max-height:calc(100vh - 200px)}
+.kanban-col-header{padding:11px 14px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;border-radius:10px 10px 0 0}
+.kanban-col-title{font-size:12.5px;font-weight:700;color:#374151}
+.kanban-col-count{font-size:11px;font-weight:700;background:#e5e7eb;color:#6b7280;padding:2px 8px;border-radius:10px}
+.kanban-col-body{flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:7px}
+.kanban-col-body::-webkit-scrollbar{width:4px}
+.kanban-col-body::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:2px}
+.kanban-card{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:11px 12px;cursor:pointer;transition:box-shadow .15s,transform .1s;position:relative}
+.kanban-card:hover{box-shadow:0 4px 14px rgba(0,0,0,.1);transform:translateY(-1px)}
+.kc-name{font-size:13px;font-weight:700;color:#111;margin-bottom:3px;line-height:1.3}
+.kc-sub{font-size:11px;color:#6b7280;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kc-bottom{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.kc-score-badge{font-size:11px;font-weight:700;padding:2px 7px;border-radius:5px}
+.kc-move-select{font-size:11px;border:1px solid #e5e7eb;border-radius:4px;background:#f9fafb;color:#374151;padding:2px 4px;cursor:pointer;outline:none;max-width:110px}
+.kc-move-select:focus{border-color:#4caf50}
+.kc-followup{font-size:10.5px;margin-top:6px;padding:3px 7px;border-radius:4px;font-weight:600}
+.kc-followup-overdue{background:#fee2e2;color:#dc2626}
+.kc-followup-soon{background:#fef3c7;color:#d97706}
+
+/* Pipeline Detail Panel */
+.pd-overlay{position:fixed;top:60px;left:0;right:0;bottom:0;z-index:160;background:rgba(0,0,0,.3);display:none;backdrop-filter:blur(2px)}
+.pd-overlay.visible{display:block}
+.pd-panel{position:absolute;top:0;right:0;bottom:0;width:540px;max-width:100%;background:#fff;overflow-y:auto;box-shadow:-4px 0 30px rgba(0,0,0,.14)}
+.pd-panel::-webkit-scrollbar{width:5px}
+.pd-panel::-webkit-scrollbar-thumb{background:#e5e7eb;border-radius:3px}
+.pd-hdr{padding:14px 20px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:10px;position:sticky;top:0;background:#fff;z-index:1}
+.pd-back-btn{background:none;border:none;color:#6b7280;cursor:pointer;font-size:14px;padding:0;display:flex;align-items:center;gap:4px;font-family:inherit}
+.pd-back-btn:hover{color:#2e7d32}
+.pd-hdr-name{font-size:15px;font-weight:700;color:#111;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pd-body{padding:20px}
+.pd-sec{margin-bottom:24px}
+.pd-sec-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#9ca3af;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.pd-sec-title::after{content:'';flex:1;height:1px;background:#f3f4f6}
+.pd-stage-sel{width:100%;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:14px;font-weight:600;color:#374151;background:#f9fafb;cursor:pointer;outline:none;font-family:inherit}
+.pd-stage-sel:focus{border-color:#4caf50}
+.pd-field{margin-bottom:10px}
+.pd-field label{display:block;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.pd-field input{width:100%;padding:8px 10px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;color:#374151;outline:none;font-family:inherit;background:#fff}
+.pd-field input:focus{border-color:#4caf50}
+.pd-date-overdue{border-color:#ef4444!important;background:#fef2f2!important}
+.pd-date-soon{border-color:#f59e0b!important;background:#fffbeb!important}
+.pd-date-label{font-size:11px;font-weight:700;margin-top:3px}
+.date-lbl-overdue{color:#dc2626}
+.date-lbl-soon{color:#d97706}
+.pd-btn{padding:8px 18px;border:none;border-radius:6px;background:#2e7d32;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+.pd-btn:hover{background:#1b5e20}
+.pd-btn:disabled{opacity:.55;cursor:not-allowed}
+.pd-btn-outline{background:#fff;border:1px solid #e5e7eb;color:#374151}
+.pd-btn-outline:hover{border-color:#4caf50;color:#2e7d32;background:#f0fdf4}
+.pd-save-ok{font-size:12px;color:#4caf50;margin-left:10px;opacity:0;transition:opacity .3s;font-weight:600}
+.pd-save-ok.show{opacity:1}
+.pd-note-input{width:100%;padding:8px 10px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;color:#374151;outline:none;font-family:inherit;resize:vertical;min-height:60px;line-height:1.5}
+.pd-note-input:focus{border-color:#4caf50}
+.pd-note-log{margin-top:12px;display:flex;flex-direction:column;gap:7px}
+.pd-note-entry{font-size:12.5px;color:#374151;padding:9px 11px;background:#f9fafb;border-radius:6px;border-left:3px solid #e5e7eb;line-height:1.55}
+.pd-note-ts{font-size:10.5px;color:#9ca3af;display:block;margin-bottom:2px;font-weight:500}
+.pd-outreach-area{width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;color:#374151;outline:none;font-family:inherit;resize:vertical;min-height:150px;line-height:1.65}
+.pd-outreach-area:focus{border-color:#4caf50}
+.pd-actions-row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center}
 </style>
 </head>
 <body>
@@ -294,6 +364,7 @@ input[type=range]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;bac
 
   <!-- MAIN CONTENT -->
   <main class="main-content">
+    <div id="dashboardContent">
     <!-- NATURAL LANGUAGE SEARCH -->
     <div class="nl-search-row">
       <input class="nl-input" type="text" id="nlInput" placeholder="Describe what you're looking for… e.g. HVAC companies in Texas with high scores" onkeydown="if(event.key==='Enter')runNLSearch()">
@@ -318,6 +389,8 @@ input[type=range]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;bac
     </div>
     <div id="companiesList"><div class="loading-state"><div class="spinner"></div><p>Loading companies…</p></div></div>
     <button class="load-more" id="loadMoreBtn" style="display:none" onclick="loadMoreCards()">Load more</button>
+    </div><!-- end dashboardContent -->
+    <div id="pipelineView" style="display:none"></div>
   </main>
 </div>
 
@@ -329,6 +402,17 @@ input[type=range]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;bac
     <span class="bc-name" id="bcName"></span>
   </div>
   <div class="detail-body" id="detailBody"></div>
+</div>
+
+<!-- PIPELINE DETAIL OVERLAY -->
+<div class="pd-overlay" id="pdOverlay" onclick="closePipelineDetailOutside(event)">
+  <div class="pd-panel" id="pdPanel" onclick="event.stopPropagation()">
+    <div class="pd-hdr">
+      <button class="pd-back-btn" onclick="closePipelineDetail()">← Close</button>
+      <span class="pd-hdr-name" id="pdHdrName"></span>
+    </div>
+    <div class="pd-body" id="pdBody"></div>
+  </div>
 </div>
 
 <!-- TOAST -->
@@ -344,6 +428,9 @@ let filterTimer = null;
 let currentView = 'dashboard';
 let nlMode = false;
 let currentDetailId = null;
+let pipelineEntries = [];
+let activePipelineStage = null;
+let currentPipelineEntry = null;
 
 // Persist state in localStorage
 let savedIds   = new Set(JSON.parse(localStorage.getItem('sf_saved')   || '[]'));
@@ -996,50 +1083,374 @@ function clearNLSearch() {
 
 // ── VIEWS ──
 function switchView(view) {
-  currentView=view;
-  document.querySelectorAll('.nav-link').forEach(l=>l.classList.remove('active'));
-  document.getElementById('nav'+view.charAt(0).toUpperCase()+view.slice(1))?.classList.add('active');
-  if (view==='pipeline') { loadPipelineView(); return; }
+  currentView = view;
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  document.getElementById('nav' + view.charAt(0).toUpperCase() + view.slice(1))?.classList.add('active');
+
+  const sidebar = document.querySelector('.sidebar');
+  const mc = document.querySelector('.main-content');
+  const dash = document.getElementById('dashboardContent');
+  const pipe = document.getElementById('pipelineView');
+
+  if (view === 'pipeline') {
+    sidebar.style.display = 'none';
+    mc.style.marginLeft = '0';
+    dash.style.display = 'none';
+    pipe.style.display = 'block';
+    loadPipelineView();
+    return;
+  }
+  sidebar.style.display = '';
+  mc.style.marginLeft = '';
+  dash.style.display = '';
+  pipe.style.display = 'none';
+  closePipelineDetail();
   applyFilters();
 }
 
+// ── PIPELINE CRM ──
+
+const STAGES = ['Identified', 'Contacted', 'Meeting Scheduled', 'LOI Sent', 'Due Diligence'];
+
+function stageColor(stage) {
+  return {'Identified':'#9ca3af','Contacted':'#3b82f6','Meeting Scheduled':'#f59e0b','LOI Sent':'#ec4899','Due Diligence':'#22c55e'}[stage]||'#9ca3af';
+}
+
+function stagePillColors(stage) {
+  return {
+    'Identified':       ['#f3f4f6','#374151'],
+    'Contacted':        ['#dbeafe','#1e40af'],
+    'Meeting Scheduled':['#fef9c3','#854d0e'],
+    'LOI Sent':         ['#fce7f3','#be185d'],
+    'Due Diligence':    ['#dcfce7','#166534'],
+  }[stage]||['#f3f4f6','#374151'];
+}
+
+function fmtNoteDate(d) {
+  return d.toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',hour12:true});
+}
+
+function checkFollowUp(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr + 'T00:00:00');
+  if (isNaN(d)) return null;
+  const now = new Date(); now.setHours(0,0,0,0);
+  const days = (d - now) / 86400000;
+  if (days < 0) return 'overdue';
+  if (days <= 3) return 'soon';
+  return 'ok';
+}
+
+function parsePipelineNotes(str) {
+  if (!str) return [];
+  return str.split('\n').filter(l => l.trim()).map(l => {
+    const m = l.match(/^\[(.+?)\] — (.*)$/);
+    return m ? {ts: m[1], text: m[2]} : {ts: null, text: l};
+  });
+}
+
 async function loadPipelineView() {
-  const list=document.getElementById('companiesList');
-  list.innerHTML='<div class="loading-state"><div class="spinner"></div><p>Loading pipeline…</p></div>';
-  document.getElementById('loadMoreBtn').style.display='none';
-  document.getElementById('resultsCount').textContent='Loading…';
+  const pipe = document.getElementById('pipelineView');
+  pipe.innerHTML = '<div class="loading-state"><div class="spinner"></div><p>Loading pipeline…</p></div>';
+  activePipelineStage = null;
   try {
-    const data=await fetch(`${API}/pipeline`).then(r=>r.json());
-    const rows=data.results||[];
-    document.getElementById('resultsCount').textContent=`${rows.length} in pipeline`;
-    if (rows.length===0) {
-      list.innerHTML='<div class="empty-state"><h3>Your pipeline is empty</h3><p>Click "+ Pipeline" on any company card to add it here.</p></div>';
-      return;
-    }
-    list.innerHTML=rows.map(r=>`
-      <div class="company-card">
-        <div class="card-row1">
-          <div class="card-name">${esc(r.company_name||'Unknown')}</div>
-          <div class="score-badge ${badgeClass(r.acquisition_score||0)}">
-            <div class="score-num">${r.acquisition_score||0}</div>
-            <div class="score-lbl">acq. score</div>
-          </div>
-        </div>
-        <div class="card-row2">${esc(r.industry_sector||'Unknown industry')} &middot; ${esc([r.city,r.state].filter(Boolean).join(', ')||'Location unknown')}</div>
-        <div class="card-row3">
-          <div class="card-stat"><span class="${r.award_amount?'stat-ok':'stat-na'}">${r.award_amount?'✓':'−'}</span><span>${r.award_amount?`~${fmtMoney(r.award_amount)} revenue`:'— revenue'}</span></div>
-        </div>
-        <div class="card-footer">
-          <div class="card-source">Added: ${r.date_added} &nbsp;·&nbsp; Status: <strong>${r.status}</strong></div>
-          <div class="card-actions">
-            <button class="btn-sm" onclick="showDetail(${r.company_id})">View details</button>
-          </div>
+    const data = await fetch(`${API}/pipeline`).then(r => r.json());
+    pipelineEntries = data.results || [];
+    renderPipelinePage();
+  } catch(e) {
+    pipe.innerHTML = '<div class="empty-state"><h3>Could not load pipeline</h3><p>Make sure the API server is running.</p></div>';
+  }
+}
+
+function renderPipelinePage() {
+  document.getElementById('pipelineView').innerHTML =
+    '<div id="pipelineSummary" class="pipeline-summary"></div>' +
+    '<div id="kanbanBoard" class="kanban-board"></div>';
+  renderPipelineSummary();
+  renderKanban();
+}
+
+function renderPipelineSummary() {
+  const counts = {};
+  STAGES.forEach(s => counts[s] = 0);
+  pipelineEntries.forEach(e => { const s = e.stage||'Identified'; if (counts[s]!==undefined) counts[s]++; });
+
+  const allActive = activePipelineStage === null;
+  const pills = STAGES.map(s => {
+    const [bg, fg] = stagePillColors(s);
+    const active = activePipelineStage === s;
+    return `<button class="stage-pill${active?' spill-active':''}" style="background:${bg};color:${fg}" onclick="filterPipelineStage('${s}')">
+      ${s} <strong>${counts[s]}</strong>
+    </button>`;
+  }).join('');
+
+  document.getElementById('pipelineSummary').innerHTML =
+    `<span class="pipeline-summary-label">Pipeline</span>
+    <button class="stage-pill${allActive?' spill-active':''}" style="background:#fff;color:#374151;border-color:#e5e7eb" onclick="filterPipelineStage(null)">
+      All <strong>${pipelineEntries.length}</strong>
+    </button>
+    ${pills}`;
+}
+
+function filterPipelineStage(stage) {
+  activePipelineStage = stage;
+  renderPipelineSummary();
+  renderKanban();
+}
+
+function renderKanban() {
+  const filtered = activePipelineStage
+    ? pipelineEntries.filter(e => (e.stage||'Identified') === activePipelineStage)
+    : pipelineEntries;
+
+  document.getElementById('kanbanBoard').innerHTML = STAGES.map(stage => {
+    const cards = filtered.filter(e => (e.stage||'Identified') === stage);
+    const emptyMsg = '<div style="text-align:center;padding:20px 0;color:#d1d5db;font-size:12px">No companies</div>';
+    return `<div class="kanban-col">
+      <div class="kanban-col-header" style="border-top:3px solid ${stageColor(stage)}">
+        <span class="kanban-col-title">${stage}</span>
+        <span class="kanban-col-count">${cards.length}</span>
+      </div>
+      <div class="kanban-col-body">
+        ${cards.length === 0 ? emptyMsg : cards.map(renderKanbanCard).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderKanbanCard(entry) {
+  const score = entry.acquisition_score || 0;
+  const loc = [entry.city, entry.state].filter(Boolean).join(', ') || 'Unknown';
+  const fu = checkFollowUp(entry.follow_up_date);
+  const fuHtml = fu === 'overdue'
+    ? `<div class="kc-followup kc-followup-overdue">⚠ Overdue: ${esc(entry.follow_up_date)}</div>`
+    : fu === 'soon'
+    ? `<div class="kc-followup kc-followup-soon">⏰ Due soon: ${esc(entry.follow_up_date)}</div>`
+    : '';
+  const stageOpts = STAGES.map(s =>
+    `<option value="${s}"${(entry.stage||'Identified')===s?' selected':''}>${s}</option>`
+  ).join('');
+  return `<div class="kanban-card" onclick="openPipelineDetail(${entry.company_id})" style="border-left:3px solid ${stageColor(entry.stage||'Identified')}">
+    <div class="kc-name">${esc(entry.company_name||'Unknown')}</div>
+    <div class="kc-sub">${esc(entry.industry_sector||'Unknown')} · ${esc(loc)}</div>
+    <div class="kc-bottom">
+      <span class="kc-score-badge ${badgeClass(score)}" style="padding:2px 8px">${score}</span>
+      <select class="kc-move-select" onclick="event.stopPropagation()" onchange="updatePipelineStage(${entry.company_id},this.value)">${stageOpts}</select>
+    </div>
+    ${fuHtml}
+  </div>`;
+}
+
+async function updatePipelineStage(companyId, newStage) {
+  try {
+    await fetch(`${API}/pipeline/${companyId}`, {
+      method:'PATCH', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({stage: newStage})
+    });
+    const entry = pipelineEntries.find(e => e.company_id === companyId);
+    if (entry) entry.stage = newStage;
+    // sync detail panel stage select if open
+    const pdSel = document.getElementById('pdStageSelect');
+    if (pdSel && currentPipelineEntry && currentPipelineEntry.company_id === companyId) pdSel.value = newStage;
+    renderPipelineSummary();
+    renderKanban();
+    showToast(`Moved to ${newStage}`);
+  } catch(e) { showToast('Failed to update stage'); }
+}
+
+function openPipelineDetail(companyId) {
+  const entry = pipelineEntries.find(e => e.company_id === companyId);
+  if (!entry) return;
+  currentPipelineEntry = entry;
+  document.getElementById('pdHdrName').textContent = entry.company_name || 'Company';
+  document.getElementById('pdBody').innerHTML = renderPipelineDetailHTML(entry);
+  initFollowUpDisplay(entry);
+  document.getElementById('pdOverlay').classList.add('visible');
+}
+
+function closePipelineDetail() {
+  const el = document.getElementById('pdOverlay');
+  if (el) el.classList.remove('visible');
+  currentPipelineEntry = null;
+}
+
+function closePipelineDetailOutside(e) {
+  if (e.target === document.getElementById('pdOverlay')) closePipelineDetail();
+}
+
+function renderPipelineDetailHTML(entry) {
+  const stageOpts = STAGES.map(s =>
+    `<option value="${s}"${(entry.stage||'Identified')===s?' selected':''}>${s}</option>`
+  ).join('');
+
+  const notes = parsePipelineNotes(entry.notes);
+  const noteLogHtml = notes.length
+    ? notes.map(n => `<div class="pd-note-entry">${n.ts?`<span class="pd-note-ts">${esc(n.ts)}</span>`:''} ${esc(n.text)}</div>`).join('')
+    : '<div style="font-size:12px;color:#9ca3af;padding:4px 0">No notes yet.</div>';
+
+  const hasOutreach = !!entry.outreach_message;
+
+  return `
+    <div class="pd-sec">
+      <div class="pd-sec-title">Stage</div>
+      <select class="pd-stage-sel" id="pdStageSelect" onchange="updatePipelineStage(${entry.company_id},this.value)">${stageOpts}</select>
+    </div>
+
+    <div class="pd-sec">
+      <div class="pd-sec-title">Owner Contact</div>
+      <div class="pd-field"><label>Owner Name</label><input type="text" id="pdOwnerName" value="${esc(entry.owner_name||'')}" placeholder="e.g. John Smith"></div>
+      <div class="pd-field"><label>Phone</label><input type="text" id="pdOwnerPhone" value="${esc(entry.owner_phone||'')}" placeholder="+1 (555) 000-0000"></div>
+      <div class="pd-field"><label>Email</label><input type="text" id="pdOwnerEmail" value="${esc(entry.owner_email||'')}" placeholder="owner@company.com"></div>
+      <div class="pd-field"><label>LinkedIn</label><input type="text" id="pdOwnerLinkedIn" value="${esc(entry.owner_linkedin||'')}" placeholder="https://linkedin.com/in/…"></div>
+      <button class="pd-btn" onclick="savePipelineContact(${entry.company_id})">Save Contact</button>
+      <span class="pd-save-ok" id="contactSaveOk">✓ Saved</span>
+    </div>
+
+    <div class="pd-sec">
+      <div class="pd-sec-title">Follow-up Date</div>
+      <div class="pd-field">
+        <input type="date" id="pdFollowUpDate" value="${esc(entry.follow_up_date||'')}">
+        <div class="pd-date-label" id="pdDateLabel"></div>
+      </div>
+      <button class="pd-btn" onclick="savePipelineFollowUp(${entry.company_id})">Save Date</button>
+      <span class="pd-save-ok" id="dateSaveOk">✓ Saved</span>
+    </div>
+
+    <div class="pd-sec">
+      <div class="pd-sec-title">Notes &amp; Activity</div>
+      <textarea class="pd-note-input" id="pdNoteInput" placeholder="Add a note…"></textarea>
+      <button class="pd-btn pd-btn-outline" style="margin-top:6px" onclick="addPipelineNote(${entry.company_id})">Add Note</button>
+      <div class="pd-note-log" id="pdNoteLog">${noteLogHtml}</div>
+    </div>
+
+    <div class="pd-sec">
+      <div class="pd-sec-title">Cold Outreach Email</div>
+      <button class="btn-gen-ai" id="pdOutreachBtn" onclick="generatePipelineOutreach(${entry.company_id})">
+        ✦ ${hasOutreach ? 'Regenerate Outreach Email' : 'Generate Outreach Email'}
+      </button>
+      <div id="pdOutreachResult" style="${hasOutreach?'':'display:none'}; margin-top:12px">
+        <textarea class="pd-outreach-area" id="pdOutreachArea">${esc(entry.outreach_message||'')}</textarea>
+        <div class="pd-actions-row">
+          <button class="pd-btn pd-btn-outline" onclick="savePipelineOutreach(${entry.company_id})">Save edits</button>
+          <button class="pd-btn pd-btn-outline" onclick="copyOutreach()">Copy to clipboard</button>
+          <span class="pd-save-ok" id="outreachSaveOk">✓ Saved</span>
         </div>
       </div>
-    `).join('');
-  } catch(e) {
-    list.innerHTML='<div class="empty-state"><h3>Could not load pipeline</h3><p>Make sure the API server is running.</p></div>';
+    </div>
+  `;
+}
+
+function initFollowUpDisplay(entry) {
+  const input = document.getElementById('pdFollowUpDate');
+  const label = document.getElementById('pdDateLabel');
+  if (!input || !label) return;
+  function updateLabel() {
+    const fu = checkFollowUp(input.value);
+    input.classList.toggle('pd-date-overdue', fu === 'overdue');
+    input.classList.toggle('pd-date-soon',    fu === 'soon');
+    label.innerHTML = fu === 'overdue' ? '<span class="date-lbl-overdue">Overdue</span>'
+                    : fu === 'soon'    ? '<span class="date-lbl-soon">Due soon</span>' : '';
   }
+  updateLabel();
+  input.addEventListener('change', updateLabel);
+}
+
+async function savePipelineContact(companyId) {
+  const update = {
+    owner_name:     document.getElementById('pdOwnerName').value    || null,
+    owner_phone:    document.getElementById('pdOwnerPhone').value   || null,
+    owner_email:    document.getElementById('pdOwnerEmail').value   || null,
+    owner_linkedin: document.getElementById('pdOwnerLinkedIn').value || null,
+  };
+  try {
+    await fetch(`${API}/pipeline/${companyId}`, {
+      method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(update)
+    });
+    const entry = pipelineEntries.find(e => e.company_id === companyId);
+    if (entry) Object.assign(entry, update);
+    const ok = document.getElementById('contactSaveOk');
+    ok.classList.add('show'); setTimeout(() => ok.classList.remove('show'), 2000);
+  } catch(e) { showToast('Failed to save contact info'); }
+}
+
+async function savePipelineFollowUp(companyId) {
+  const val = document.getElementById('pdFollowUpDate').value || null;
+  try {
+    await fetch(`${API}/pipeline/${companyId}`, {
+      method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({follow_up_date: val})
+    });
+    const entry = pipelineEntries.find(e => e.company_id === companyId);
+    if (entry) entry.follow_up_date = val;
+    const ok = document.getElementById('dateSaveOk');
+    ok.classList.add('show'); setTimeout(() => ok.classList.remove('show'), 2000);
+    renderKanban();
+  } catch(e) { showToast('Failed to save date'); }
+}
+
+function addPipelineNote(companyId) {
+  const entry = pipelineEntries.find(e => e.company_id === companyId);
+  if (!entry) return;
+  const input = document.getElementById('pdNoteInput');
+  const text = input.value.trim();
+  if (!text) return;
+
+  const ts = fmtNoteDate(new Date());
+  const newLine = `[${ts}] — ${text}`;
+  const updated = entry.notes ? `${newLine}\n${entry.notes}` : newLine;
+  entry.notes = updated;
+  input.value = '';
+
+  const notes = parsePipelineNotes(updated);
+  document.getElementById('pdNoteLog').innerHTML = notes.map(n =>
+    `<div class="pd-note-entry">${n.ts?`<span class="pd-note-ts">${esc(n.ts)}</span>`:''} ${esc(n.text)}</div>`
+  ).join('');
+
+  fetch(`${API}/pipeline/${companyId}`, {
+    method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({notes: updated})
+  }).catch(() => showToast('Failed to save note'));
+}
+
+async function generatePipelineOutreach(companyId) {
+  const btn = document.getElementById('pdOutreachBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="btn-nl-spinner"></span>Generating…';
+  try {
+    const data = await fetch(`${API}/pipeline/${companyId}/outreach`).then(r => {
+      if (!r.ok) return r.json().then(e => { throw new Error(e.detail||'API error'); });
+      return r.json();
+    });
+    const entry = pipelineEntries.find(e => e.company_id === companyId);
+    if (entry) entry.outreach_message = data.message;
+    const result = document.getElementById('pdOutreachResult');
+    result.style.display = '';
+    document.getElementById('pdOutreachArea').value = data.message;
+    btn.innerHTML = '✦ Regenerate Outreach Email';
+    btn.disabled = false;
+  } catch(e) {
+    btn.innerHTML = '✦ Generate Outreach Email';
+    btn.disabled = false;
+    showToast('Generation failed: ' + e.message);
+  }
+}
+
+async function savePipelineOutreach(companyId) {
+  const text = document.getElementById('pdOutreachArea').value;
+  const entry = pipelineEntries.find(e => e.company_id === companyId);
+  try {
+    await fetch(`${API}/pipeline/${companyId}`, {
+      method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({outreach_message: text})
+    });
+    if (entry) entry.outreach_message = text;
+    const ok = document.getElementById('outreachSaveOk');
+    ok.classList.add('show'); setTimeout(() => ok.classList.remove('show'), 2000);
+  } catch(e) { showToast('Failed to save outreach message'); }
+}
+
+function copyOutreach() {
+  const text = document.getElementById('pdOutreachArea').value;
+  navigator.clipboard.writeText(text)
+    .then(() => showToast('Copied to clipboard!'))
+    .catch(() => showToast('Copy failed'));
 }
 
 // ── SLIDERS ──

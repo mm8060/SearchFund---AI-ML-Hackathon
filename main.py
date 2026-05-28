@@ -95,10 +95,23 @@ async def lifespan(app: FastAPI):
                 date_added  TEXT    NOT NULL DEFAULT (date('now'))
             )
         """)
+        for col, defn in [
+            ("stage",            "TEXT DEFAULT 'Identified'"),
+            ("follow_up_date",   "TEXT"),
+            ("owner_name",       "TEXT"),
+            ("owner_phone",      "TEXT"),
+            ("owner_email",      "TEXT"),
+            ("owner_linkedin",   "TEXT"),
+            ("outreach_message", "TEXT"),
+        ]:
+            try:
+                await db.execute(f"ALTER TABLE pipeline ADD COLUMN {col} {defn}")
+            except Exception:
+                pass
         try:
             await db.execute("ALTER TABLE companies ADD COLUMN ai_summary TEXT")
         except Exception:
-            pass  # column already exists
+            pass
         await db.commit()
     yield
 
@@ -138,6 +151,25 @@ class PipelineIn(BaseModel):
     status: Optional[str] = "prospect"
     notes: Optional[str] = None
     date_added: Optional[date] = None
+    stage: Optional[str] = "Identified"
+    follow_up_date: Optional[str] = None
+    owner_name: Optional[str] = None
+    owner_phone: Optional[str] = None
+    owner_email: Optional[str] = None
+    owner_linkedin: Optional[str] = None
+    outreach_message: Optional[str] = None
+
+
+class PipelineUpdate(BaseModel):
+    status: Optional[str] = None
+    notes: Optional[str] = None
+    stage: Optional[str] = None
+    follow_up_date: Optional[str] = None
+    owner_name: Optional[str] = None
+    owner_phone: Optional[str] = None
+    owner_email: Optional[str] = None
+    owner_linkedin: Optional[str] = None
+    outreach_message: Optional[str] = None
 
 
 class PipelineOut(PipelineIn):
@@ -296,10 +328,15 @@ async def add_to_pipeline(payload: PipelineIn):
         date_str = str(payload.date_added) if payload.date_added else None
         async with db.execute(
             """
-            INSERT INTO pipeline (company_id, status, notes, date_added)
-            VALUES (?, ?, ?, COALESCE(?, date('now')))
+            INSERT INTO pipeline (company_id, status, notes, date_added,
+                                  stage, follow_up_date, owner_name, owner_phone,
+                                  owner_email, owner_linkedin, outreach_message)
+            VALUES (?, ?, ?, COALESCE(?, date('now')), ?, ?, ?, ?, ?, ?, ?)
             """,
-            (payload.company_id, payload.status, payload.notes, date_str),
+            (payload.company_id, payload.status, payload.notes, date_str,
+             payload.stage or 'Identified', payload.follow_up_date,
+             payload.owner_name, payload.owner_phone, payload.owner_email,
+             payload.owner_linkedin, payload.outreach_message),
         ) as cur:
             new_id = cur.lastrowid
 
@@ -320,8 +357,11 @@ async def get_pipeline():
         async with db.execute(
             """
             SELECT p.id, p.company_id, p.status, p.notes, p.date_added,
+                   p.stage, p.follow_up_date, p.owner_name, p.owner_phone,
+                   p.owner_email, p.owner_linkedin, p.outreach_message,
                    c.company_name, c.acquisition_score, c.industry_sector,
-                   c.city, c.state, c.award_amount
+                   c.city, c.state, c.award_amount, c.cluster_label,
+                   c.date_of_inc, c.naics_code
             FROM pipeline p
             JOIN companies c ON c.id = p.company_id
             ORDER BY p.date_added DESC, p.id DESC
@@ -330,6 +370,99 @@ async def get_pipeline():
             rows = [dict(r) for r in await cur.fetchall()]
 
     return {"total": len(rows), "results": rows}
+
+
+@app.patch("/pipeline/{company_id}")
+async def update_pipeline(company_id: int, payload: PipelineUpdate):
+    fields = payload.model_dump(exclude_unset=True)
+    if not fields:
+        raise HTTPException(status_code=400, detail="No fields to update")
+
+    set_clause = ", ".join(f"{k} = ?" for k in fields)
+    values = list(fields.values()) + [company_id]
+
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute(
+            f"UPDATE pipeline SET {set_clause} WHERE company_id = ?", values
+        ) as cur:
+            if cur.rowcount == 0:
+                raise HTTPException(status_code=404, detail="Pipeline entry not found")
+        await db.commit()
+
+        async with db.execute(
+            """
+            SELECT p.id, p.company_id, p.status, p.notes, p.date_added,
+                   p.stage, p.follow_up_date, p.owner_name, p.owner_phone,
+                   p.owner_email, p.owner_linkedin, p.outreach_message,
+                   c.company_name, c.acquisition_score, c.industry_sector,
+                   c.city, c.state, c.award_amount
+            FROM pipeline p JOIN companies c ON c.id = p.company_id
+            WHERE p.company_id = ?
+            """, (company_id,)
+        ) as cur:
+            row = await cur.fetchone()
+
+    if row is None:
+        raise HTTPException(status_code=404, detail="Pipeline entry not found")
+    return dict(row)
+
+
+@app.get("/pipeline/{company_id}/outreach")
+async def generate_outreach(company_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute(
+            """
+            SELECT p.outreach_message, c.company_name, c.industry_sector,
+                   c.city, c.state, c.date_of_inc, c.award_amount, c.cluster_label
+            FROM pipeline p JOIN companies c ON c.id = p.company_id
+            WHERE p.company_id = ?
+            """, (company_id,)
+        ) as cur:
+            row = await cur.fetchone()
+
+    if row is None:
+        raise HTTPException(status_code=404, detail="Pipeline entry not found")
+
+    data = dict(row)
+    years = _calc_years(data.get("date_of_inc"))
+    years_str = str(years) if years is not None else "N/A"
+    has_gov = "Yes" if (data.get("award_amount") or 0) > 0 else "No"
+    location = ", ".join(filter(None, [data.get("city"), data.get("state")])) or "Unknown"
+
+    user_prompt = (
+        "Write a short, personalized cold outreach email from a search fund operator "
+        "to the owner of this business. Keep it under 150 words. Be genuine, not salesy. "
+        "Reference specific details about their business. Do not mention price or acquisition "
+        "directly — just express interest in a conversation about the business's future.\n"
+        f"Company: {data.get('company_name', 'Unknown')}\n"
+        f"Industry: {data.get('industry_sector', 'Unknown')}\n"
+        f"Location: {location}\n"
+        f"Years in business: {years_str}\n"
+        f"Government contracts: {has_gov}\n"
+        f"Acquisition score signals: {data.get('cluster_label', 'Unknown')}"
+    )
+
+    client = get_anthropic()
+    response = await asyncio.to_thread(
+        client.messages.create,
+        model="claude-haiku-4-5-20251001",
+        max_tokens=350,
+        system="You are a search fund operator writing personalized, genuine outreach emails to small business owners. Write in first person.",
+        messages=[{"role": "user", "content": user_prompt}],
+    )
+
+    message = response.content[0].text.strip()
+
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE pipeline SET outreach_message = ? WHERE company_id = ?",
+            (message, company_id)
+        )
+        await db.commit()
+
+    return {"message": message}
 
 
 @app.post("/search/natural")
