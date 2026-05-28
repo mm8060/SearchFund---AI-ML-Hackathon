@@ -278,14 +278,15 @@ input[type=range]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;bac
 .pd-outreach-area:focus{border-color:#4caf50}
 .pd-actions-row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center}
 
-/* Outreach modal */
+/* Legacy modal (External Listings) */
 .modal-backdrop{position:fixed;inset:0;background:rgba(10,10,10,0.45);display:none;align-items:center;justify-content:center;z-index:1200}
 .modal-backdrop.show{display:flex}
 .modal{background:#fff;border-radius:10px;width:720px;max-width:94%;padding:18px;box-shadow:0 12px 40px rgba(0,0,0,0.2);font-size:14px}
 .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-.modal-title{font-weight:800;color:#111}
-.modal-close{background:none;border:none;font-size:18px;cursor:pointer}
-.modal-body{max-height:60vh;overflow:auto;border:1px solid #eef2f7;padding:12px;border-radius:8px;background:#fbfbfd}
+.modal-title{font-size:16px;font-weight:700;color:#111}
+.modal-close{background:none;border:none;font-size:18px;color:#9ca3af;cursor:pointer;line-height:1;padding:0;font-family:inherit}
+.modal-close:hover{color:#111}
+.modal-body{max-height:60vh;overflow-y:auto;padding:16px}
 .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
 .btn-copy{padding:8px 12px;border-radius:6px;border:1px solid #e5e7eb;background:#fff;cursor:pointer}
 .btn-send{padding:8px 12px;border-radius:6px;border:none;background:#2e7d32;color:#fff;cursor:pointer}
@@ -297,6 +298,25 @@ input[type=range]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;bac
 .industry-chip-row{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 18px}
 .industry-chip{padding:6px 10px;border-radius:18px;background:#e8f5e9;color:#2e7d32;cursor:pointer;border:1px solid #dff0e6;font-weight:600;font-size:13px}
 .industry-chip:hover{background:#c8e6c9}
+
+/* ── OUTREACH DRAFT MODAL (detail page) ── */
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;z-index:300;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+.modal-overlay.visible{display:flex}
+.modal-panel{background:#fff;border-radius:12px;width:560px;max-width:calc(100vw - 48px);max-height:calc(100vh - 80px);display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.modal-hdr{padding:16px 20px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.modal-draft-area{width:100%;min-height:200px;padding:12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13.5px;line-height:1.75;color:#374151;outline:none;font-family:inherit;resize:vertical}
+.modal-draft-area:focus{border-color:#4caf50}
+
+/* ── TAILWINDS / HEADWINDS ── */
+.winds-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.winds-col{}
+.winds-col-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
+.winds-col-label-green{color:#2e7d32}
+.winds-col-label-red{color:#dc2626}
+.winds-row{display:flex;align-items:flex-start;gap:8px;font-size:12.5px;color:#374151;line-height:1.45;margin-bottom:7px}
+.winds-icon{font-size:13px;font-weight:700;flex-shrink:0;margin-top:1px}
+.winds-icon-green{color:#2e7d32}
+.winds-icon-red{color:#dc2626}
 </style>
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
@@ -432,6 +452,17 @@ input[type=range]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;bac
   <div class="detail-body" id="detailBody"></div>
 </div>
 
+<!-- OUTREACH DRAFT MODAL -->
+<div class="modal-overlay" id="outreachDraftModal" onclick="closeOutreachDraftOutside(event)">
+  <div class="modal-panel" onclick="event.stopPropagation()">
+    <div class="modal-hdr">
+      <span class="modal-title">✉ Outreach Draft</span>
+      <button class="modal-close" onclick="closeOutreachDraftModal()">✕</button>
+    </div>
+    <div class="modal-body" id="outreachDraftBody"></div>
+  </div>
+</div>
+
 <!-- PIPELINE DETAIL OVERLAY -->
 <div class="pd-overlay" id="pdOverlay" onclick="closePipelineDetailOutside(event)">
   <div class="pd-panel" id="pdPanel" onclick="event.stopPropagation()">
@@ -446,46 +477,29 @@ input[type=range]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;bac
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<!-- OUTREACH MODAL -->
-<div class="modal-backdrop" id="outreachModal">
+<!-- EXTERNAL LISTINGS MODAL -->
+<div class="modal-backdrop" id="externalModal">
   <div class="modal" role="dialog" aria-modal="true">
     <div class="modal-header">
-      <div class="modal-title">Outreach Draft</div>
-      <button class="modal-close" onclick="closeOutreachModal()">✕</button>
+      <div class="modal-title">External Listings &amp; Searches</div>
+      <button class="modal-close" onclick="closeExternalListings()">✕</button>
     </div>
-    <div class="modal-body" id="outreachBody">
-      <!-- generated content -->
+    <div class="modal-body" id="externalBody">
+      <div style="margin-bottom:10px">Quickly search external company listing sources. Enter a company or keyword and pick a source.</div>
+      <input id="externalQuery" type="text" placeholder="company name or keyword" style="width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:6px;margin-bottom:10px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-sm" onclick="externalSearch('linkedin')">Search LinkedIn</button>
+        <button class="btn-sm" onclick="externalSearch('salesforce')">Open Salesforce</button>
+        <button class="btn-sm" onclick="externalSearch('crunchbase')">Search Crunchbase</button>
+        <button class="btn-sm" onclick="externalSearch('google')">Search Google</button>
+      </div>
+      <div style="margin-top:12px;font-size:13px;color:#6b7280">Links open in a new tab.</div>
     </div>
     <div class="modal-actions">
-      <button class="btn-copy" onclick="copyOutreach()">Copy to clipboard</button>
-      <button class="btn-send" onclick="copyOutreach(true)">Copy & Close</button>
+      <button class="btn-copy" onclick="closeExternalListings()">Close</button>
     </div>
   </div>
 </div>
-
-    <!-- EXTERNAL LISTINGS MODAL -->
-    <div class="modal-backdrop" id="externalModal">
-      <div class="modal" role="dialog" aria-modal="true">
-        <div class="modal-header">
-          <div class="modal-title">External Listings & Searches</div>
-          <button class="modal-close" onclick="closeExternalListings()">✕</button>
-        </div>
-        <div class="modal-body" id="externalBody">
-          <div style="margin-bottom:10px">Quickly search external company listing sources. Enter a company or keyword and pick a source.</div>
-          <input id="externalQuery" type="text" placeholder="company name or keyword" style="width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:6px;margin-bottom:10px">
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn-sm" onclick="externalSearch('linkedin')">Search LinkedIn</button>
-            <button class="btn-sm" onclick="externalSearch('salesforce')">Open Salesforce</button>
-            <button class="btn-sm" onclick="externalSearch('crunchbase')">Search Crunchbase</button>
-            <button class="btn-sm" onclick="externalSearch('google')">Search Google</button>
-          </div>
-          <div style="margin-top:12px;font-size:13px;color:#6b7280">Links open in a new tab. Use the input to populate platform search queries.</div>
-        </div>
-        <div class="modal-actions">
-          <button class="btn-copy" onclick="closeExternalListings()">Close</button>
-        </div>
-      </div>
-    </div>
 
 <!-- INDUSTRY INTELLIGENCE PANEL (global slide-out) -->
 <div id="industryPanel" class="industry-panel-backdrop" aria-hidden="true">
@@ -496,17 +510,15 @@ input[type=range]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;bac
     </div>
     <button class="modal-close" onclick="closeIndustryPanel()">✕</button>
   </div>
-
   <div style="font-size:13px;color:#374151;margin-bottom:10px">Fragmentation Matrix</div>
   <div id="fragmentationChart" style="width:100%;height:320px;"></div>
-
   <div style="font-size:13px;color:#374151;margin:12px 0 6px">Macro Economic Drivers</div>
   <ul id="macroChecklist" style="margin:0 0 12px 18px;color:#374151"></ul>
-
   <div style="font-size:13px;color:#374151;margin:12px 0 6px">Aggregated Multi-Year Performance Band</div>
   <div id="performanceChart" style="width:100%;height:260px;"></div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script>
 const API = 'http://localhost:8000';
 let allCompanies = [];
@@ -1137,6 +1149,7 @@ async function addToPipeline(id, btn) {
 async function showDetail(id) {
   const company = await fetch(`${API}/companies/${id}`).then(r=>r.json());
   renderDetail(company);
+  renderDetailCharts(company);
   document.getElementById('detailPage').classList.add('visible');
   document.getElementById('detailPage').scrollTop=0;
   document.getElementById('bcName').textContent = company.company_name||'Company';
@@ -1254,6 +1267,7 @@ function renderDetail(c) {
             <button class="btn-action" onclick="showToast('Share link copied!')">↗ Share</button>
             <button class="btn-action" onclick="openOutreach(${c.id})">✉ Draft</button>
             <button class="btn-action-primary${inPipe?' active':''}" id="detPipeBtn" onclick="detAddPipeline(${c.id})">${inPipe?'✓ In Pipeline':'+ Add to Pipeline'}</button>
+            <button class="btn-action" onclick="openOutreachDraftModal(${c.id})">✉ Outreach Draft</button>
           </div>
         </div>
       </div>
@@ -1305,6 +1319,20 @@ function renderDetail(c) {
         <div class="ai-sub">Powered by Claude · Search Fund Analyst</div>
         ${aiSummaryHTML}
       </div>
+
+      <!-- Fragmentation Matrix -->
+      <div class="d-card">
+        <div class="section-label">Industry Fragmentation</div>
+        <div style="position:relative;height:240px">
+          <canvas id="fragChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Tailwinds / Headwinds -->
+      <div class="d-card">
+        <div class="section-label">Tailwinds &amp; Headwinds</div>
+        ${renderTailwindsHTML(itype)}
+      </div>
     </div>
 
     <div class="detail-col-right">
@@ -1341,6 +1369,17 @@ function renderDetail(c) {
         <div class="rc-label">Tags</div>
         <div class="tags-cloud">
           ${rcTags.map(t=>`<span class="tag-gray">${esc(t)}</span>`).join('')||'<span style="color:#9ca3af;font-size:13px">No tags</span>'}
+        </div>
+      </div>
+
+      <!-- Revenue Band Chart -->
+      <div class="info-card">
+        <div class="rc-label">Revenue Stability Model</div>
+        <div style="position:relative;height:160px">
+          <canvas id="revChart"></canvas>
+        </div>
+        <div style="font-size:10.5px;color:#9ca3af;margin-top:6px;text-align:center;line-height:1.4">
+          Illustrative industry revenue band model — not historical data
         </div>
       </div>
 
@@ -1871,6 +1910,294 @@ function copyOutreach() {
   navigator.clipboard.writeText(text)
     .then(() => showToast('Copied to clipboard!'))
     .catch(() => showToast('Copy failed'));
+}
+
+// ── FRAGMENTATION MATRIX + REVENUE BAND + TAILWINDS ──
+
+let fragChartInstance = null;
+let revChartInstance = null;
+
+const FRAG_DATA = {
+  hvac:         {x: 2, y: 9, label: 'HVAC'},
+  pestcontrol:  {x: 2, y: 8, label: 'Pest Control'},
+  landscaping:  {x: 3, y: 6, label: 'Landscaping'},
+  construction: {x: 5, y: 5, label: 'Construction'},
+  auto:         {x: 4, y: 5, label: 'Auto Services'},
+  manufacturing:{x: 8, y: 3, label: 'Manufacturing'},
+};
+
+const INDUSTRY_WINDS = {
+  hvac: {
+    tailwinds: ['Non-discretionary emergency spending', 'Recurring maintenance contracts', 'Aging housing stock driving demand'],
+    headwinds: ['Technician labor shortages', 'Seasonal revenue volatility', 'Municipal regulatory compliance'],
+  },
+  construction: {
+    tailwinds: ['Infrastructure spending growth', 'Commercial real estate demand', 'Government contract pipeline'],
+    headwinds: ['Material cost inflation', 'Permitting delays', 'Subcontractor dependency'],
+  },
+  pestcontrol: {
+    tailwinds: ['Non-discretionary spending', 'Recurring contract model', 'Climate-driven demand increase'],
+    headwinds: ['Chemical regulation changes', 'Technician turnover', 'Seasonal concentration'],
+  },
+  manufacturing: {
+    tailwinds: ['Reshoring trends', 'Government contracts', 'Stable B2B relationships'],
+    headwinds: ['Supply chain exposure', 'High capex requirements', 'Automation disruption'],
+  },
+  landscaping: {
+    tailwinds: ['Established customer base', 'Recurring service model', 'Growing residential demand'],
+    headwinds: ['Seasonal revenue fluctuation', 'Labor availability constraints', 'Weather dependency'],
+  },
+  auto: {
+    tailwinds: ['Essential recurring service', 'Aging vehicle fleet growth', 'Geographic captive customer base'],
+    headwinds: ['EV transition uncertainty', 'Parts cost volatility', 'Technician skill gap'],
+  },
+};
+
+const DEFAULT_WINDS = {
+  tailwinds: ['Established customer base', 'Recurring revenue potential', 'Local market presence'],
+  headwinds: ['Limited data available', 'Market conditions unclear', 'Requires further diligence'],
+};
+
+function renderTailwindsHTML(itype) {
+  const winds = INDUSTRY_WINDS[itype] || DEFAULT_WINDS;
+  const twRows = winds.tailwinds.map(t =>
+    `<div class="winds-row"><span class="winds-icon winds-icon-green">✓</span><span>${esc(t)}</span></div>`
+  ).join('');
+  const hwRows = winds.headwinds.map(h =>
+    `<div class="winds-row"><span class="winds-icon winds-icon-red">✕</span><span>${esc(h)}</span></div>`
+  ).join('');
+  return `<div class="winds-grid">
+    <div class="winds-col">
+      <div class="winds-col-label winds-col-label-green">Tailwinds</div>${twRows}
+    </div>
+    <div class="winds-col">
+      <div class="winds-col-label winds-col-label-red">Headwinds</div>${hwRows}
+    </div>
+  </div>`;
+}
+
+function seededRand(seed, i) {
+  const x = Math.sin(seed * 9301 + i * 49297 + 233) * 16807;
+  return x - Math.floor(x);
+}
+
+function renderDetailCharts(c) {
+  const itype = getIndustryType(c);
+  const seed = c.id || 42;
+
+  // ── Fragmentation scatter ──
+  const fragCanvas = document.getElementById('fragChart');
+  if (fragCanvas) {
+    if (fragChartInstance) { fragChartInstance.destroy(); fragChartInstance = null; }
+
+    const currentPt = FRAG_DATA[itype] || {x: 5, y: 5, label: IND_LABELS[itype] || 'This Industry'};
+    const otherPts  = Object.entries(FRAG_DATA)
+      .filter(([k]) => k !== itype)
+      .map(([, v]) => ({x: v.x, y: v.y, label: v.label}));
+
+    const quadrantPlugin = {
+      id: 'quadrants',
+      afterDraw(chart) {
+        const {ctx, chartArea: {left, right, top, bottom, width, height}} = chart;
+        const midX = left + width / 2, midY = top + height / 2;
+        ctx.save();
+        ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = 'rgba(209,213,219,0.9)';
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(midX, top);   ctx.lineTo(midX, bottom); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(left, midY);  ctx.lineTo(right, midY);  ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.font = '10px system-ui, -apple-system, sans-serif';
+        ctx.fillStyle = 'rgba(107,114,128,0.75)';
+        ctx.textAlign = 'center';
+        ctx.fillText('Fragmented & Active',    left + width * 0.25, top + 14);
+        ctx.fillText('Consolidated & Active',  left + width * 0.75, top + 14);
+        ctx.fillText('Fragmented & Quiet',     left + width * 0.25, bottom - 6);
+        ctx.fillText('Consolidated & Quiet',   left + width * 0.75, bottom - 6);
+        ctx.restore();
+      },
+    };
+
+    fragChartInstance = new Chart(fragCanvas, {
+      type: 'scatter',
+      data: {
+        datasets: [
+          {
+            label: 'Other industries',
+            data: otherPts,
+            backgroundColor: 'rgba(209,213,219,0.75)',
+            pointRadius: 7,
+            pointHoverRadius: 9,
+          },
+          {
+            label: currentPt.label,
+            data: [{x: currentPt.x, y: currentPt.y}],
+            backgroundColor: '#2e7d32',
+            pointRadius: 11,
+            pointHoverRadius: 13,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {display: false},
+          tooltip: {
+            callbacks: {
+              label(ctx) {
+                const r = ctx.raw;
+                const lbl = r.label || ctx.dataset.label || '';
+                return `${lbl}: concentration ${r.x}/10, activity ${r.y}/10`;
+              },
+            },
+          },
+        },
+        scales: {
+          x: {
+            min: 0, max: 10,
+            title: {display: true, text: 'Market Concentration →', font: {size: 11}, color: '#6b7280'},
+            ticks: {display: false},
+            grid: {display: false},
+            border: {display: true, color: '#e5e7eb'},
+          },
+          y: {
+            min: 0, max: 10,
+            title: {display: true, text: '↑ Acquisition Activity', font: {size: 11}, color: '#6b7280'},
+            ticks: {display: false},
+            grid: {display: false},
+            border: {display: true, color: '#e5e7eb'},
+          },
+        },
+      },
+      plugins: [quadrantPlugin],
+    });
+  }
+
+  // ── Revenue band chart ──
+  const revCanvas = document.getElementById('revChart');
+  if (revCanvas) {
+    if (revChartInstance) { revChartInstance.destroy(); revChartInstance = null; }
+    const base  = (c.award_amount && c.award_amount > 0) ? c.award_amount : 800000;
+    const years = ['2017','2018','2019','2020','2021','2022','2023','2024'];
+    const upper    = years.map((_, i) => Math.round(base * 1.15 * (0.96 + seededRand(seed, i * 3)     * 0.08)));
+    const lower    = years.map((_, i) => Math.round(base * 0.85 * (0.96 + seededRand(seed, i * 3 + 1) * 0.08)));
+    const baseline = years.map((_, i) => Math.round(base        * (0.96 + seededRand(seed, i * 3 + 2) * 0.08)));
+
+    revChartInstance = new Chart(revCanvas, {
+      type: 'line',
+      data: {
+        labels: years,
+        datasets: [
+          {
+            label: 'Upper band',
+            data: upper,
+            borderColor: 'rgba(76,175,80,0.35)',
+            backgroundColor: 'rgba(76,175,80,0.1)',
+            borderWidth: 1,
+            pointRadius: 0,
+            fill: '+1',
+            tension: 0.45,
+          },
+          {
+            label: 'Lower band',
+            data: lower,
+            borderColor: 'rgba(76,175,80,0.35)',
+            backgroundColor: 'transparent',
+            borderWidth: 1,
+            pointRadius: 0,
+            fill: false,
+            tension: 0.45,
+          },
+          {
+            label: 'Baseline',
+            data: baseline,
+            borderColor: '#2e7d32',
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            pointRadius: 0,
+            borderDash: [5, 3],
+            tension: 0.45,
+            fill: false,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {display: false},
+          tooltip: {
+            callbacks: {
+              label(ctx) { return `${ctx.dataset.label}: ${fmtMoney(ctx.raw)}`; },
+            },
+          },
+        },
+        scales: {
+          x: {
+            ticks: {font: {size: 10}, color: '#9ca3af'},
+            grid: {display: false},
+            border: {display: false},
+          },
+          y: {
+            ticks: {
+              font: {size: 10}, color: '#9ca3af',
+              callback(v) { return fmtMoney(v); },
+              maxTicksLimit: 4,
+            },
+            grid: {color: 'rgba(229,231,235,0.5)'},
+            border: {display: false},
+          },
+        },
+      },
+    });
+  }
+}
+
+// ── OUTREACH DRAFT MODAL ──
+
+async function openOutreachDraftModal(id) {
+  const modal = document.getElementById('outreachDraftModal');
+  const body  = document.getElementById('outreachDraftBody');
+  modal.classList.add('visible');
+  body.innerHTML = '<div class="ai-spinner"><div class="spinner" style="width:24px;height:24px;border-width:2px;margin:0"></div><span>Generating outreach draft…</span></div>';
+
+  try {
+    const data = await fetch(`${API}/pipeline/${id}/outreach`).then(r => {
+      if (!r.ok) return r.json().then(e => { throw new Error(e.detail || 'API error'); });
+      return r.json();
+    });
+    body.innerHTML = `
+      <p style="font-size:12px;color:#9ca3af;margin-bottom:12px">Powered by Claude · Personalized to this company's profile. Review and edit before sending.</p>
+      <textarea class="modal-draft-area" id="outreachDraftText">${esc(data.message)}</textarea>
+      <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
+        <button class="pd-btn" onclick="copyOutreachDraft()">Copy to clipboard</button>
+        <span class="pd-save-ok" id="outreachCopyOk">✓ Copied!</span>
+      </div>`;
+  } catch(e) {
+    const notInPipe = (e.message||'').toLowerCase().includes('not found');
+    body.innerHTML = `<div style="text-align:center;padding:24px 0">
+      <p style="color:#e65100;font-size:14px;margin-bottom:8px">⚠ ${esc(e.message)}</p>
+      ${notInPipe ? '<p style="font-size:13px;color:#6b7280">Add this company to your pipeline first, then try again.</p>' : ''}
+    </div>`;
+  }
+}
+
+function closeOutreachDraftModal() {
+  document.getElementById('outreachDraftModal').classList.remove('visible');
+}
+
+function closeOutreachDraftOutside(e) {
+  if (e.target === document.getElementById('outreachDraftModal')) closeOutreachDraftModal();
+}
+
+function copyOutreachDraft() {
+  const text = document.getElementById('outreachDraftText')?.value || '';
+  navigator.clipboard.writeText(text).then(() => {
+    const ok = document.getElementById('outreachCopyOk');
+    ok.classList.add('show');
+    setTimeout(() => ok.classList.remove('show'), 2000);
+  }).catch(() => showToast('Copy failed'));
 }
 
 // ── SLIDERS ──
