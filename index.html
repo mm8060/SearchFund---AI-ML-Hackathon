@@ -277,7 +277,28 @@ input[type=range]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;bac
 .pd-outreach-area{width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:6px;font-size:13px;color:#374151;outline:none;font-family:inherit;resize:vertical;min-height:150px;line-height:1.65}
 .pd-outreach-area:focus{border-color:#4caf50}
 .pd-actions-row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center}
+
+/* Outreach modal */
+.modal-backdrop{position:fixed;inset:0;background:rgba(10,10,10,0.45);display:none;align-items:center;justify-content:center;z-index:1200}
+.modal-backdrop.show{display:flex}
+.modal{background:#fff;border-radius:10px;width:720px;max-width:94%;padding:18px;box-shadow:0 12px 40px rgba(0,0,0,0.2);font-size:14px}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.modal-title{font-weight:800;color:#111}
+.modal-close{background:none;border:none;font-size:18px;cursor:pointer}
+.modal-body{max-height:60vh;overflow:auto;border:1px solid #eef2f7;padding:12px;border-radius:8px;background:#fbfbfd}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+.btn-copy{padding:8px 12px;border-radius:6px;border:1px solid #e5e7eb;background:#fff;cursor:pointer}
+.btn-send{padding:8px 12px;border-radius:6px;border:none;background:#2e7d32;color:#fff;cursor:pointer}
+
+/* Industry intelligence panel (slide-out) */
+.industry-panel-backdrop{position:fixed;right:0;top:60px;bottom:0;width:640px;max-width:100%;background:#fff;box-shadow:-12px 0 30px rgba(0,0,0,0.12);transform:translateX(100%);transition:transform .28s ease;z-index:1250;overflow:auto;padding:22px}
+.industry-panel-backdrop.show{transform:translateX(0)}
+.industry-panel-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.industry-chip-row{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 18px}
+.industry-chip{padding:6px 10px;border-radius:18px;background:#e8f5e9;color:#2e7d32;cursor:pointer;border:1px solid #dff0e6;font-weight:600;font-size:13px}
+.industry-chip:hover{background:#c8e6c9}
 </style>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 <body>
 
@@ -288,6 +309,7 @@ input[type=range]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;bac
     <button class="nav-link active" id="navDashboard" onclick="switchView('dashboard')">Dashboard</button>
     <button class="nav-link" id="navSaved" onclick="switchView('saved')">Saved</button>
     <button class="nav-link" id="navPipeline" onclick="switchView('pipeline')">Pipeline</button>
+    <button class="nav-link" id="navExternal" onclick="openExternalListings()">External Listings</button>
   </div>
   <div class="nav-avatar">MM</div>
 </nav>
@@ -370,6 +392,12 @@ input[type=range]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;bac
       <input class="nl-input" type="text" id="nlInput" placeholder="Describe what you're looking for… e.g. HVAC companies in Texas with high scores" onkeydown="if(event.key==='Enter')runNLSearch()">
       <button class="btn-nl" id="nlBtn" onclick="runNLSearch()">✦ AI Search</button>
     </div>
+        <div class="industry-chip-row" id="industryChips">
+          <div class="industry-chip" onclick="openIndustryPanel('238220','HVAC & Plumbing')">HVAC (NAICS 238220)</div>
+          <div class="industry-chip" onclick="openIndustryPanel('236','Construction')">Construction (NAICS 236)</div>
+          <div class="industry-chip" onclick="openIndustryPanel('561710','Pest Control')">Pest Control (NAICS 561710)</div>
+          <div class="industry-chip" onclick="openIndustryPanel('32','Manufacturing')">Manufacturing (NAICS 31-33)</div>
+        </div>
     <div class="nl-banner" id="nlBanner" style="display:none">
       <span>Showing AI results for: <strong id="nlBannerText"></strong></span>
       <button class="btn-nl-clear" onclick="clearNLSearch()">✕ Clear</button>
@@ -417,6 +445,67 @@ input[type=range]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;bac
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
+
+<!-- OUTREACH MODAL -->
+<div class="modal-backdrop" id="outreachModal">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-header">
+      <div class="modal-title">Outreach Draft</div>
+      <button class="modal-close" onclick="closeOutreachModal()">✕</button>
+    </div>
+    <div class="modal-body" id="outreachBody">
+      <!-- generated content -->
+    </div>
+    <div class="modal-actions">
+      <button class="btn-copy" onclick="copyOutreach()">Copy to clipboard</button>
+      <button class="btn-send" onclick="copyOutreach(true)">Copy & Close</button>
+    </div>
+  </div>
+</div>
+
+    <!-- EXTERNAL LISTINGS MODAL -->
+    <div class="modal-backdrop" id="externalModal">
+      <div class="modal" role="dialog" aria-modal="true">
+        <div class="modal-header">
+          <div class="modal-title">External Listings & Searches</div>
+          <button class="modal-close" onclick="closeExternalListings()">✕</button>
+        </div>
+        <div class="modal-body" id="externalBody">
+          <div style="margin-bottom:10px">Quickly search external company listing sources. Enter a company or keyword and pick a source.</div>
+          <input id="externalQuery" type="text" placeholder="company name or keyword" style="width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:6px;margin-bottom:10px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn-sm" onclick="externalSearch('linkedin')">Search LinkedIn</button>
+            <button class="btn-sm" onclick="externalSearch('salesforce')">Open Salesforce</button>
+            <button class="btn-sm" onclick="externalSearch('crunchbase')">Search Crunchbase</button>
+            <button class="btn-sm" onclick="externalSearch('google')">Search Google</button>
+          </div>
+          <div style="margin-top:12px;font-size:13px;color:#6b7280">Links open in a new tab. Use the input to populate platform search queries.</div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-copy" onclick="closeExternalListings()">Close</button>
+        </div>
+      </div>
+    </div>
+
+<!-- INDUSTRY INTELLIGENCE PANEL (global slide-out) -->
+<div id="industryPanel" class="industry-panel-backdrop" aria-hidden="true">
+  <div class="industry-panel-header">
+    <div>
+      <div style="font-weight:800;font-size:16px" id="industryPanelTitle">Industry Intelligence</div>
+      <div style="font-size:12px;color:#6b7280" id="industryPanelSubtitle">Overview</div>
+    </div>
+    <button class="modal-close" onclick="closeIndustryPanel()">✕</button>
+  </div>
+
+  <div style="font-size:13px;color:#374151;margin-bottom:10px">Fragmentation Matrix</div>
+  <div id="fragmentationChart" style="width:100%;height:320px;"></div>
+
+  <div style="font-size:13px;color:#374151;margin:12px 0 6px">Macro Economic Drivers</div>
+  <ul id="macroChecklist" style="margin:0 0 12px 18px;color:#374151"></ul>
+
+  <div style="font-size:13px;color:#374151;margin:12px 0 6px">Aggregated Multi-Year Performance Band</div>
+  <div id="performanceChart" style="width:100%;height:260px;"></div>
+</div>
 
 <script>
 const API = 'http://localhost:8000';
@@ -470,6 +559,87 @@ const NAICS_EXACT = {'238220':'hvac','561710':'pestcontrol','561730':'landscapin
 const IND_LABELS  = {hvac:'HVAC & Plumbing',construction:'Construction',manufacturing:'Manufacturing',pestcontrol:'Pest Control',landscaping:'Landscaping',auto:'Auto Services'};
 const IND_SCORES  = {hvac:90,pestcontrol:85,construction:80,landscaping:75,auto:75,manufacturing:65};
 
+// ── STATIC INDUSTRY METRICS (fallback / precomputed) ──
+const INDUSTRY_METRICS = {
+  hvac: {
+    top4Pct: 32, hhi: 1200,
+    performance: {
+      years: ['2019','2020','2021','2022','2023','2024','2025','2026'],
+      mean:  [120000,125000,130000,135000,140000,145000,150000,155000],
+      upper: [144000,150000,156000,162000,168000,174000,180000,186000],
+      lower: [96000,100000,104000,108000,112000,116000,120000,124000]
+    },
+    macros: { tail:['Residential HVAC replacement cycle','Strong service & maintenance revenue'], head:['Rising skilled labor costs','Commodity price swings'] }
+  },
+  construction: {
+    top4Pct: 18, hhi: 850,
+    performance: {
+      years: ['2019','2020','2021','2022','2023','2024','2025','2026'],
+      mean:  [300000,290000,310000,330000,320000,340000,350000,360000],
+      upper: [360000,348000,372000,396000,384000,408000,420000,432000],
+      lower: [240000,232000,248000,264000,256000,272000,280000,288000]
+    },
+    macros: { tail:['Infrastructure spending','Commercial construction demand'], head:['Permitting delays','Cyclical capex exposure'] }
+  },
+  manufacturing: {
+    top4Pct: 40, hhi: 1800,
+    performance: {
+      years: ['2019','2020','2021','2022','2023','2024','2025','2026'],
+      mean:  [800000,820000,840000,860000,880000,900000,920000,940000],
+      upper: [920000,944000,968000,992000,1016000,1040000,1064000,1088000],
+      lower: [680000,698000,716000,734000,752000,770000,788000,806000]
+    },
+    macros: { tail:['Automation driving productivity','Export demand'], head:['Supply-chain volatility','Capital intensity'] }
+  },
+  pestcontrol: {
+    top4Pct: 22, hhi: 980,
+    performance: {
+      years: ['2019','2020','2021','2022','2023','2024','2025','2026'],
+      mean:  [45000,47000,49000,50000,52000,54000,56000,58000],
+      upper: [54000,56400,58800,60000,62400,64800,67200,69600],
+      lower: [36000,37600,39200,40000,41600,43200,44800,46400]
+    },
+    macros: { tail:['Recurring residential contracts','Low churn rates'], head:['Seasonality','Localized pricing pressure'] }
+  },
+  landscaping: {
+    top4Pct: 27, hhi: 1100,
+    performance: {
+      years: ['2019','2020','2021','2022','2023','2024','2025','2026'],
+      mean:  [60000,62000,64000,66000,68000,70000,72000,74000],
+      upper: [72000,74400,76800,79200,81600,84000,86400,88800],
+      lower: [48000,49600,51200,52800,54400,56000,57600,59200]
+    },
+    macros: { tail:['Residential investment in landscaping','Recurring maintenance contracts'], head:['Labor seasonality','Weather sensitivity'] }
+  },
+  auto: {
+    top4Pct: 35, hhi: 1500,
+    performance: {
+      years: ['2019','2020','2021','2022','2023','2024','2025','2026'],
+      mean:  [70000,72000,74000,76000,78000,80000,82000,84000],
+      upper: [84000,86400,88800,91200,93600,96000,98400,100800],
+      lower: [56000,57600,59200,60800,62400,64000,65600,67200]
+    },
+    macros: { tail:['Vehicle maintenance steady demand','High aftermarket margins'], head:['EV transition impact','Parts supply constraints'] }
+  }
+};
+
+function getIndustryKey(naics,label){
+  if (naics){
+    const s=String(naics);
+    if (NAICS_EXACT[s]) return NAICS_EXACT[s];
+    if (/^2382/.test(s)) return 'hvac';
+    if (/^(236|237|238)/.test(s)) return 'construction';
+    if (/^(31|32|33)/.test(s)) return 'manufacturing';
+    if (/^56171/.test(s)) return 'pestcontrol';
+    if (/^56173/.test(s)) return 'landscaping';
+    if (/^811/.test(s)) return 'auto';
+  }
+  if (label){
+    for (const [k,v] of Object.entries(IND_LABELS)) if (v===label) return k;
+  }
+  return null;
+}
+
 function getIndustryType(c) {
   const n = String(c.naics_code||'').trim();
   if (n && NAICS_EXACT[n]) return NAICS_EXACT[n];
@@ -493,6 +663,80 @@ function getIndustryType(c) {
   for (const [type,kws] of Object.entries(IND_KEYWORDS))
     if (kws.some(k=>sec.includes(k))) return type;
   return null;
+}
+
+// ── OUTREACH DRAFTS ──
+function openOutreach(id) {
+  const company = allCompanies.find(c=>c.id===id);
+  const body = document.getElementById('outreachBody');
+  if (!company) { body.innerHTML = '<p style="color:#e65100">Company data not loaded.</p>'; document.getElementById('outreachModal').classList.add('show'); return; }
+  const draft = generateOutreachText(company);
+  body.innerHTML = `<div style="white-space:pre-wrap;font-family:inherit;line-height:1.6">${esc(draft)}</div>`;
+  document.getElementById('outreachModal').classList.add('show');
+}
+
+function closeOutreachModal() {
+  document.getElementById('outreachModal').classList.remove('show');
+}
+
+function openExternalListings(){
+  const modal = document.getElementById('externalModal');
+  if (!modal){
+    console.error('externalModal not found');
+    showToast('External Listings modal not available');
+    return;
+  }
+  modal.classList.add('show');
+  const q = (document.getElementById('searchInput')?.value || '').trim();
+  const input = document.getElementById('externalQuery');
+  if (q && input) input.value = q;
+  // small debug ping
+  console.log('External Listings opened, query:', q);
+}
+
+function closeExternalListings(){
+  document.getElementById('externalModal').classList.remove('show');
+}
+
+function externalSearch(platform){
+  const q = encodeURIComponent((document.getElementById('externalQuery').value||'').trim());
+  let url = '';
+  if (platform==='linkedin'){
+    url = 'https://www.linkedin.com/search/results/companies/?keywords=' + q;
+  } else if (platform==='salesforce'){
+    // Salesforce company directory isn't public; open Salesforce homepage or allow users to paste their URL
+    url = 'https://www.salesforce.com/';
+  } else if (platform==='crunchbase'){
+    url = q ? ('https://www.crunchbase.com/search/organizations/field/organizations/num_results:10,query:' + q) : 'https://www.crunchbase.com/';
+  } else {
+    url = 'https://www.google.com/search?q=' + q;
+  }
+  window.open(url, '_blank');
+}
+
+function copyOutreach(closeAfter=false) {
+  const body = document.getElementById('outreachBody');
+  const text = body.textContent || body.innerText || '';
+  navigator.clipboard?.writeText(text).then(()=>{
+    showToast('Copied outreach draft');
+    if (closeAfter) closeOutreachModal();
+  }).catch(()=>{ showToast('Copy failed'); if (closeAfter) closeOutreachModal(); });
+}
+
+function generateOutreachText(c) {
+  const owner = c.owner_name || c.company_name || 'Owner';
+  const cityState = [c.city, c.state].filter(Boolean).join(', ');
+  const years = getYears(c.date_of_inc);
+  const industry = c.industry_sector || getIndustryType(c) || 'your industry';
+  const score = c.acquisition_score!=null?`(acquisition score: ${c.acquisition_score}/100)` : '';
+  const revenue = c.award_amount?`approximately ${fmtMoney(c.award_amount)} in reported awards/revenue` : '';
+
+  let opening = `Dear ${owner},\n\nI hope this message finds you well. My name is [Your Name], and I lead a small investment team actively looking for high-quality, founder-led businesses in ${industry}.`;
+  let middle = "\n\nWe have been following " + industry + " businesses" + (cityState ? (" in " + cityState) : "") + " and were impressed by " + (c.company_name || "your company's") + " " + (years ? (years + " years of continuous operation") : "established track record") + ". " + revenue;
+  let ask = `\n\nI would welcome a brief conversation to learn more about your business, particularly customer concentration, margin dynamics, and transition plans. If you are open to a short call, please let me know a convenient time or feel free to reply to this email.`;
+  let close = `\n\nThank you for your time and consideration.\n\nSincerely,\n[Your Name]\n[Contact information]\n`;
+
+  return `${opening}${middle}${ask}${close}`;
 }
 
 function getRegion(state) {
@@ -543,6 +787,174 @@ function clusterTagClass(label) {
 
 function esc(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── INDUSTRY PANEL HELPERS ──
+function openIndustryPanel(naics, label){
+  const title = document.getElementById('industryPanelTitle');
+  const subtitle = document.getElementById('industryPanelSubtitle');
+  title.textContent = label || 'Industry Intelligence';
+  subtitle.textContent = naics?('NAICS ' + naics):'';
+
+  // find matching companies (prefix match for 2-3 digit NAICS)
+  const pool = allCompanies.filter(c=>{
+    const n = String(c.naics_code||'');
+    if (!n) return false;
+    if (naics.length<=3) return n.startsWith(naics);
+    return n===naics;
+  });
+
+  // prefer static precomputed metrics when available
+  const indKey = getIndustryKey(naics,label);
+  const metrics = indKey? INDUSTRY_METRICS[indKey] : null;
+  if (metrics){
+    renderFragmentationFromMetrics(metrics,label);
+    renderPerformanceBandFromMetrics(metrics,label);
+    populateMacroChecklist(naics,label,metrics);
+  } else {
+    renderFragmentation(pool, label);
+    renderPerformanceBand(pool, label);
+    populateMacroChecklist(naics, label);
+  }
+
+  document.getElementById('industryPanel').classList.add('show');
+}
+
+function closeIndustryPanel(){ document.getElementById('industryPanel').classList.remove('show'); }
+
+function renderFragmentation(pool, label){
+  const el = document.getElementById('fragmentationChart');
+  if (!pool || pool.length===0){ el.innerHTML = '<div style="color:#6b7280">No data for this industry in the dataset.</div>'; return; }
+  const vals = pool.map(c=>Number(c.award_amount||0));
+  const total = vals.reduce((a,b)=>a+b,0) || 0;
+  const sorted = pool.slice().sort((a,b)=> (Number(b.award_amount||0)) - (Number(a.award_amount||0)));
+  const top4 = sorted.slice(0,4).reduce((a,c)=>a+Number(c.award_amount||0),0);
+  const top4Pct = total? Math.round(top4/total*100):0;
+
+  // HHI (Herfindahl) as fragmentation inverse
+  const shares = pool.map(c=> total? (Number(c.award_amount||0)/total):0);
+  const hhi = Math.round(shares.reduce((a,s)=>a + (s*s),0)*10000); // 0-10000
+  const fragmentationIndex = Math.round(100 - Math.min(100, hhi/100));
+
+  const x = top4Pct; const y = fragmentationIndex;
+
+  const data = [{ x:[x], y:[y], mode:'markers+text', text:[label||''], textposition:'top center', marker:{size:18,color:'#2e7d32'} }];
+  const layout = {
+    xaxis:{title:'Top 4 Market Share (%)',range:[0,100],zeroline:false},
+    yaxis:{title:'Fragmentation Index (higher = more fragmented)',range:[0,100],zeroline:false,automargin:true,titlefont:{size:12},standoff:12,side:'left'},
+    shapes:[
+      {type:'line',x0:50,x1:50,y0:0,y1:100,line:{dash:'dash',color:'#e5e7eb'}},
+      {type:'line',x0:0,x1:100,y0:50,y1:50,line:{dash:'dash',color:'#e5e7eb'}}
+    ],
+    annotations:[{x:x,y:y,ax:20,ay:-20,text:`Top4: ${top4Pct}% · HHI:${hhi}`,showarrow:false,font:{size:12}}],
+    margin:{t:10,l:100,r:10,b:40}
+  };
+  Plotly.newPlot(el, data, layout, {responsive:true});
+}
+
+function renderPerformanceBand(pool, label){
+  const el = document.getElementById('performanceChart');
+  if (!pool || pool.length===0){ el.innerHTML = '<div style="color:#6b7280">No performance series available.</div>'; return; }
+  const currentYear = new Date().getFullYear();
+  const years = []; for (let i=7;i>=0;i--) years.push(String(currentYear - i));
+
+  // compute avg and stdev of award amounts
+  const vals = pool.map(c=>Number(c.award_amount||0)).filter(v=>v>0);
+  const avg = vals.length? (vals.reduce((a,b)=>a+b,0)/vals.length):0;
+  const sd = vals.length? Math.sqrt(vals.map(v=>Math.pow(v-avg,2)).reduce((a,b)=>a+b,0)/vals.length):0;
+  const vol = avg? Math.min(0.5, sd/avg):0.15;
+
+  const meanSeries = years.map((y,i)=> Math.round(avg * (1 + ((i-3.5)/14)*0.06)) );
+  const upper = meanSeries.map(v=> Math.round(v*(1+vol)) );
+  const lower = meanSeries.map(v=> Math.round(v*(1-vol)) );
+
+  const traceUpper = { x: years, y: upper, mode:'lines', line:{color:'rgba(0,0,0,0)'}, name:'upper' };
+  const traceLower = { x: years, y: lower, mode:'lines', fill:'tonexty', fillcolor:'rgba(46,125,50,0.12)', line:{color:'rgba(0,0,0,0)'}, name:'lower' };
+  const traceMean  = { x: years, y: meanSeries, mode:'lines+markers', line:{color:'#2e7d32'}, name:'mean' };
+  // compute y axis min/max with padding for clearer band visualization
+  const minY = Math.min(...lower);
+  const maxY = Math.max(...upper);
+  const padLow = Math.max(1, Math.round((maxY-minY)*0.08));
+  const padHigh = padLow;
+  const layout = {
+    margin:{t:10,l:100,r:10,b:40},
+    yaxis:{
+      title:'Average award / revenue (proxy)',
+      tickformat:',d',
+      range:[Math.max(0, Math.round(minY - padLow)), Math.round(maxY + padHigh)],
+      autorange:false,
+      side:'left',
+      automargin:true,
+      titlefont:{size:12},
+      standoff:12
+    }
+  };
+  Plotly.newPlot(el, [traceUpper, traceLower, traceMean], layout, {responsive:true});
+}
+
+// Renderers that use precomputed metrics
+function renderFragmentationFromMetrics(metrics,label){
+  const el = document.getElementById('fragmentationChart');
+  if (!metrics){ el.innerHTML = '<div style="color:#6b7280">No data for this industry.</div>'; return; }
+  const x = metrics.top4Pct || 0;
+  const hhi = metrics.hhi || 0;
+  const fragmentationIndex = Math.round(100 - Math.min(100, hhi/100));
+  const y = fragmentationIndex;
+  const data = [{ x:[x], y:[y], mode:'markers+text', text:[label||''], textposition:'top center', marker:{size:18,color:'#2e7d32'} }];
+  const layout = {
+    xaxis:{title:'Top 4 Market Share (%)',range:[0,100],zeroline:false},
+    yaxis:{title:'Fragmentation Index (higher = more fragmented)',range:[0,100],zeroline:false,automargin:true,titlefont:{size:12},standoff:12,side:'left'},
+    margin:{t:10,l:100,r:10,b:40}
+  };
+  Plotly.newPlot(el, data, layout, {responsive:true});
+}
+
+function renderPerformanceBandFromMetrics(metrics,label){
+  const el = document.getElementById('performanceChart');
+  if (!metrics || !metrics.performance){ el.innerHTML = '<div style="color:#6b7280">No performance series available.</div>'; return; }
+  const years = metrics.performance.years;
+  const meanSeries = metrics.performance.mean;
+  const upper = metrics.performance.upper;
+  const lower = metrics.performance.lower;
+  const traceUpper = { x: years, y: upper, mode:'lines', line:{color:'rgba(0,0,0,0)'}, name:'upper' };
+  const traceLower = { x: years, y: lower, mode:'lines', fill:'tonexty', fillcolor:'rgba(46,125,50,0.12)', line:{color:'rgba(0,0,0,0)'}, name:'lower' };
+  const traceMean  = { x: years, y: meanSeries, mode:'lines+markers', line:{color:'#2e7d32'}, name:'mean' };
+  const minY = Math.min(...lower);
+  const maxY = Math.max(...upper);
+  const padLow = Math.max(1, Math.round((maxY-minY)*0.08));
+  const padHigh = padLow;
+  const layout = {
+    margin:{t:10,l:100,r:10,b:40},
+    yaxis:{
+      title:'Average award / revenue (proxy)',
+      tickformat:',d',
+      range:[Math.max(0, Math.round(minY - padLow)), Math.round(maxY + padHigh)],
+      autorange:false,
+      side:'left',
+      automargin:true,
+      titlefont:{size:12},
+      standoff:12
+    }
+  };
+  Plotly.newPlot(el, [traceUpper, traceLower, traceMean], layout, {responsive:true});
+}
+
+function populateMacroChecklist(naics,label,metrics){
+  const el = document.getElementById('macroChecklist');
+  let pick = null;
+  if (metrics && metrics.macros){ pick = { tail: metrics.macros.tail || [], head: metrics.macros.head || [] }; }
+  else {
+    const MAP = {
+      '238220':{ tail:['Non-discretionary emergency service demand','High recurring maintenance contract potential'], head:['Local technician labor shortages','Municipal regulatory complexity'] },
+      '561710':{ tail:['Recurring pest control contracts','Essential services demand'], head:['Seasonality','Localized pricing pressure'] },
+      '236':{ tail:['Infrastructure spending cycles','Commercial construction demand'], head:['Cyclical capex','Permitting delays'] },
+      '32':{ tail:['Manufacturing automation tailwinds','outsourcing consolidation'], head:['Capital intensity','supply-chain risk'] }
+    };
+    pick = MAP[naics] || { tail:['Stable demand drivers'], head:['Competitive intensity'] };
+  }
+  el.innerHTML = '';
+  el.innerHTML += '<li><strong>Tailwinds:</strong></li>' + (pick.tail||[]).map(t=>`<li style="margin-left:8px">${t}</li>`).join('');
+  el.innerHTML += '<li style="margin-top:8px"><strong>Headwinds:</strong></li>' + (pick.head||[]).map(t=>`<li style="margin-left:8px">${t}</li>`).join('');
 }
 
 // ── FETCH ALL COMPANIES ──
@@ -662,6 +1074,11 @@ function renderCard(c) {
   if (itype==='hvac'||itype==='pestcontrol') tags.push(['Top SF target','tag-teal']);
   if (c.cluster_label) tags.push([c.cluster_label, clusterTagClass(c.cluster_label)]);
 
+  // build tags HTML with clickable industry chip
+  const industryChip = `<span class="tag tag-teal" data-industry-label="${esc(industry)}" onclick="openIndustryPanel('${c.naics_code||''}', this.dataset.industryLabel)">${esc(industry)}</span>`;
+  const otherTagsHtml = tags.map(([l,cls])=>`<span class="tag ${cls}">${esc(l)}</span>`).join('');
+  const tagsHtml = `<div class="card-tags">${industryChip}${otherTagsHtml}</div>`;
+
   return `<div class="company-card">
     <div class="card-row1">
       <div class="card-name">${esc(c.company_name||'Unknown Company')}</div>
@@ -677,12 +1094,13 @@ function renderCard(c) {
         <span>${esc(s.text)}</span>
       </div>`).join('')}
     </div>
-    ${tags.length?`<div class="card-tags">${tags.map(([l,cls])=>`<span class="tag ${cls}">${l}</span>`).join('')}</div>`:''}
+    ${tagsHtml}
     <div class="card-footer">
       <div class="card-source">Source: ${esc(c.source||'Unknown')}</div>
       <div class="card-actions">
         <button class="btn-sm${isSaved?' active':''}" onclick="toggleSave(${c.id},this)">${isSaved?'♥ Saved':'♡ Save'}</button>
         <button class="btn-sm" onclick="showDetail(${c.id})">View details</button>
+        <button class="btn-sm" onclick="openOutreach(${c.id})">✉ Draft</button>
         <button class="btn-sm-primary${inPipe?' active':''}" onclick="addToPipeline(${c.id},this)">${inPipe?'✓ In Pipeline':'+ Pipeline'}</button>
       </div>
     </div>
@@ -796,7 +1214,7 @@ function renderDetail(c) {
   const aiSummaryHTML = c.ai_summary
     ? formatAISummary(c.ai_summary)
     : `<div id="aiSummaryContainer">
-        <button class="btn-gen-ai" id="btnGenAI" onclick="generateAISummary(${c.id})">
+        <button class="btn-gen-ai" onclick="generateAISummary(this, ${c.id})">
           ✦ Generate AI Summary
         </button>
        </div>`;
@@ -831,13 +1249,15 @@ function renderDetail(c) {
             <div class="d-title">${esc(c.company_name||'Unknown Company')}</div>
             <div class="d-subtitle">${esc(subtitle)||'&nbsp;'}</div>
           </div>
-          <div class="dh-actions">
+            <div class="dh-actions">
             <button class="btn-action${isSaved?' active':''}" id="detSaveBtn" onclick="detToggleSave(${c.id})">${isSaved?'♥ Saved':'♡ Save'}</button>
             <button class="btn-action" onclick="showToast('Share link copied!')">↗ Share</button>
+            <button class="btn-action" onclick="openOutreach(${c.id})">✉ Draft</button>
             <button class="btn-action-primary${inPipe?' active':''}" id="detPipeBtn" onclick="detAddPipeline(${c.id})">${inPipe?'✓ In Pipeline':'+ Add to Pipeline'}</button>
           </div>
         </div>
       </div>
+          <!-- industry panel is rendered globally outside detail HTML -->
 
       <!-- Score Card -->
       <div class="d-card">
@@ -1014,24 +1434,24 @@ function formatAISummary(text) {
 }
 
 // ── AI SUMMARY ──
-async function generateAISummary(id) {
-  const container = document.getElementById('aiSummaryContainer');
-  const btn = document.getElementById('btnGenAI');
+async function generateAISummary(btn, id) {
+  // btn: clicked <button> element (may be null when called programmatically)
+  const container = btn ? btn.closest('#aiSummaryContainer') : document.getElementById('aiSummaryContainer');
   if (!container) return;
-  btn.disabled = true;
+  try { if (btn) btn.disabled = true; } catch(e){}
   container.innerHTML = '<div class="ai-spinner"><div class="spinner" style="width:24px;height:24px;border-width:2px;margin:0"></div><span>Generating assessment…</span></div>';
   try {
     const data = await fetch(`${API}/companies/${id}/summary`).then(r => {
       if (!r.ok) return r.json().then(e => { throw new Error(e.detail || 'API error'); });
       return r.json();
     });
+    // replace container with formatted summary
     container.outerHTML = formatAISummary(data.summary);
-    // Update cached value so re-opening the detail doesn't show the button again
     const company = allCompanies.find(c => c.id === id);
     if (company) company.ai_summary = data.summary;
   } catch(e) {
     container.innerHTML = `<p style="color:#e65100;font-size:13px;padding:8px 0">⚠ ${esc(e.message)}</p>
-      <button class="btn-gen-ai" onclick="generateAISummary(${id})">Retry</button>`;
+      <button class="btn-gen-ai" onclick="generateAISummary(this, ${id})">Retry</button>`;
   }
 }
 
